@@ -15,8 +15,15 @@ async function getAnthropicClient(apiKey?: string | null) {
   if (!apiKey && !process.env.ANTHROPIC_API_KEY) {
     throw new Error("No API key provided");
   }
+
+  // Se apiKey for null ou undefined, usa a chave do sistema
+  const key = apiKey || process.env.ANTHROPIC_API_KEY;
+  if (!key) {
+    throw new Error("API key is required");
+  }
+
   return new Anthropic({
-    apiKey: apiKey || process.env.ANTHROPIC_API_KEY
+    apiKey: key
   });
 }
 
@@ -37,17 +44,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/chatbots", async (_req, res) => {
-    const chatbots = await storage.listChatbots();
-    res.json(chatbots);
+    try {
+      const chatbots = await storage.listChatbots();
+      res.json(chatbots);
+    } catch (err) {
+      console.error("Error listing chatbots:", err);
+      res.status(500).json({ error: "Failed to list chatbots" });
+    }
   });
 
   app.get("/api/chatbots/:id", async (req, res) => {
-    const chatbot = await storage.getChatbot(parseInt(req.params.id));
-    if (!chatbot) {
-      res.status(404).json({ error: "Chatbot not found" });
-      return;
+    try {
+      const chatbot = await storage.getChatbot(parseInt(req.params.id));
+      if (!chatbot) {
+        res.status(404).json({ error: "Chatbot not found" });
+        return;
+      }
+      res.json(chatbot);
+    } catch (err) {
+      console.error("Error getting chatbot:", err);
+      res.status(500).json({ error: "Failed to get chatbot" });
     }
-    res.json(chatbot);
   });
 
   app.patch("/api/chatbots/:id", async (req, res) => {
@@ -128,15 +145,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (err instanceof Anthropic.APIError) {
           res.status(err.status || 500).json({
             error: "AI Service Error",
-            details: "Verifique se a chave API está configurada corretamente"
-          });
-        } else if (err instanceof Error) {
-          res.status(500).json({
-            error: "Internal Server Error",
-            details: process.env.NODE_ENV === 'development' ? err.message : undefined
+            details: err.message
           });
         } else {
-          res.status(500).json({ error: "Unknown error occurred" });
+          res.status(500).json({ 
+            error: "Failed to process chat message",
+            details: err instanceof Error ? err.message : undefined
+          });
         }
       }
     } catch (err) {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,6 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { sendMessage } from "@/lib/anthropic";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import type { Chatbot } from "@shared/schema";
 
 interface Message {
   role: "user" | "assistant";
@@ -22,6 +24,18 @@ export function ChatInterface({ botId, className }: ChatInterfaceProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  // Fetch bot settings to get initial message
+  const { data: bot } = useQuery<Chatbot>({
+    queryKey: [`/api/chatbots/${botId}`],
+  });
+
+  // Set initial message when bot data is loaded
+  useEffect(() => {
+    if (bot?.settings.initialMessage) {
+      setMessages([{ role: "assistant", content: bot.settings.initialMessage }]);
+    }
+  }, [bot]);
 
   async function handleSend() {
     if (!input.trim() || isLoading) return;
