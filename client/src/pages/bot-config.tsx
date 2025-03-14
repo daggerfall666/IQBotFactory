@@ -1,4 +1,4 @@
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { BotConfigForm } from "@/components/bot-config-form";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Chatbot } from "@shared/schema";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Activity } from "lucide-react";
 
 export default function BotConfig() {
   const { id } = useParams();
@@ -26,14 +26,14 @@ export default function BotConfig() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/chatbots/${id}`] });
       toast({
-        title: "Success",
-        description: "Bot configuration updated",
+        title: "Sucesso",
+        description: "Configurações do bot atualizadas",
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to update bot configuration",
+        title: "Erro",
+        description: "Falha ao atualizar as configurações",
         variant: "destructive",
       });
     },
@@ -42,7 +42,7 @@ export default function BotConfig() {
   if (isLoading || !bot) {
     return (
       <div className="flex items-center justify-center h-screen">
-        Loading...
+        <p className="text-muted-foreground">Carregando...</p>
       </div>
     );
   }
@@ -52,31 +52,39 @@ export default function BotConfig() {
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" onClick={() => navigate("/")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Chatbots
+          Voltar
         </Button>
         <h1 className="text-4xl font-bold">{bot.name}</h1>
       </div>
 
       <Tabs defaultValue="config" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="config">Configuration</TabsTrigger>
-          <TabsTrigger value="preview">Preview</TabsTrigger>
-          <TabsTrigger value="embed">Embed Code</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="config">Configurações</TabsTrigger>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+            <TabsTrigger value="embed">Embed</TabsTrigger>
+          </TabsList>
+          <Link href={`/bot/${id}/dashboard`}>
+            <Button variant="outline">
+              <Activity className="mr-2 h-4 w-4" />
+              Dashboard
+            </Button>
+          </Link>
+        </div>
 
         <TabsContent value="config" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
-              <h2 className="text-2xl font-semibold mb-4">Bot Settings</h2>
+              <h2 className="text-2xl font-semibold mb-4">Configurações do Bot</h2>
               <BotConfigForm
                 bot={bot}
                 onSubmit={(data) => updateBot.mutate(data)}
                 isLoading={updateBot.isPending}
               />
             </div>
-            
+
             <div>
-              <h2 className="text-2xl font-semibold mb-4">Real-time Preview</h2>
+              <h2 className="text-2xl font-semibold mb-4">Preview em Tempo Real</h2>
               <ChatbotPreview bot={bot} />
             </div>
           </div>
@@ -84,7 +92,7 @@ export default function BotConfig() {
 
         <TabsContent value="preview">
           <div className="flex justify-center">
-            <div className="w-full max-w 2xl">
+            <div className="w-full max-w-2xl">
               <ChatbotPreview bot={bot} fullscreen />
             </div>
           </div>

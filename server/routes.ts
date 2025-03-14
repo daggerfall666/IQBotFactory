@@ -5,6 +5,9 @@ import { insertChatbotSchema, insertKnowledgeBaseSchema } from "@shared/schema";
 import { ZodError } from "zod";
 import multer from "multer";
 import Anthropic from "@anthropic-ai/sdk";
+import { db, chatInteractions } from './db'; // Added import for db and table
+import { eq } from 'drizzle-orm'; // Added import for eq
+
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -119,7 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Chat endpoint
+  // Chat endpoint - UPDATED
   app.post("/api/chat/:botId", async (req, res) => {
     try {
       const { message } = req.body;
@@ -146,6 +149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Using API key:", bot.apiKey ? "Bot's own key" : "System key");
 
       try {
+        const startTime = Date.now();
         const anthropic = await getAnthropicClient(bot.apiKey);
 
         const response = await anthropic.messages.create({
@@ -162,9 +166,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ],
         });
 
+        const endTime = Date.now();
+        const responseTime = endTime - startTime;
+
+        // Registra a interação
+        await db.insert(chatInteractions).values({
+          botId,
+          userMessage: message,
+          botResponse: response.content[0].text,
+          model: bot.settings.model,
+          tokensUsed: response.usage?.output_tokens || 0,
+          responseTime,
+          success: true,
+          timestamp: new Date() // Added timestamp
+        });
+
         res.json({ response: response.content[0].text });
       } catch (err) {
         console.error("Chat error:", err);
+
+        // Registra a interação com erro
+        await db.insert(chatInteractions).values({
+          botId,
+          userMessage: message,
+          botResponse: "",
+          model: bot.settings.model,
+          tokensUsed: 0,
+          responseTime: 0,
+          success: false,
+          errorMessage: err instanceof Error ? err.message : "Unknown error",
+          timestamp: new Date() // Added timestamp
+        });
+
         if (err instanceof Anthropic.APIError) {
           res.status(err.status || 500).json({
             error: "AI Service Error",
@@ -185,6 +218,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Novo endpoint para analytics
+  app.get("/api/analytics/:botId", async (req, res) => {
+    try {
+      const botId = parseInt(req.params.botId);
+      if (isNaN(botId)) {
+        res.status(400).json({ error: "Invalid bot ID" });
+        return;
+      }
+
+      const bot = await storage.getChatbot(botId);
+      if (!bot) {
+        res.status(404).json({ error: "Chatbot not found" });
+        return;
+      }
+
+      // Busca todas as interações do bot
+      const interactions = await db
+        .select()
+        .from(chatInteractions)
+        .where(eq(chatInteractions.botId, botId));
+
+      // Calcula métricas
+      const totalInteractions = interactions.length;
+      const successfulInteractions = interactions.filter(i => i.success).length;
+      const averageResponseTime = interactions.reduce((acc, i) => acc + i.responseTime, 0) / (totalInteractions || 1); // Handle division by zero
+      const totalTokensUsed = interactions.reduce((acc, i) => acc + i.tokensUsed, 0);
+
+      // Agrupa por dia para o gráfico de uso
+      const usageByDay = interactions.reduce((acc, i) => {
+        const date = new Date(i.timestamp).toISOString().split('T')[0];
+        if (!acc[date]) acc[date] = 0;
+        acc[date]++;
+        return acc;
+      }, {} as Record<string, number>);
+
+      res.json({
+        totalInteractions,
+        successfulInteractions,
+        averageResponseTime,
+        totalTokensUsed,
+        usageByDay: Object.entries(usageByDay).map(([date, count]) => ({
+          date,
+          interactions: count
+        }))
+      });
+    } catch (err) {
+      console.error("Analytics error:", err);
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
+
 
   // Admin routes
   app.post("/api/admin/system-key", async (req, res) => {

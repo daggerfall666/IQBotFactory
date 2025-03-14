@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, jsonb, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -43,18 +43,39 @@ export const knowledgeBase = pgTable("knowledge_base", {
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
 });
 
+export const chatInteractions = pgTable("chat_interactions", {
+  id: serial("id").primaryKey(),
+  botId: integer("bot_id").notNull(),
+  userMessage: text("user_message").notNull(),
+  botResponse: text("bot_response").notNull(),
+  model: text("model").notNull(),
+  tokensUsed: integer("tokens_used").notNull(),
+  responseTime: integer("response_time").notNull(),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  success: boolean("success").notNull().default(true),
+  errorMessage: text("error_message"),
+});
+
 export const insertChatbotSchema = createInsertSchema(chatbots, {
   apiKey: z.string().nullable(),
 }).omit({ id: true });
 
 export const insertKnowledgeBaseSchema = createInsertSchema(knowledgeBase).omit({ id: true, uploadedAt: true });
 
+export const insertChatInteractionSchema = createInsertSchema(chatInteractions).omit({ 
+  id: true, 
+  timestamp: true,
+  success: true,
+  errorMessage: true 
+});
+
 export type Chatbot = typeof chatbots.$inferSelect;
 export type InsertChatbot = z.infer<typeof insertChatbotSchema>;
 export type KnowledgeBase = typeof knowledgeBase.$inferSelect;
 export type InsertKnowledgeBase = z.infer<typeof insertKnowledgeBaseSchema>;
+export type ChatInteraction = typeof chatInteractions.$inferSelect;
+export type InsertChatInteraction = z.infer<typeof insertChatInteractionSchema>;
 
-// Available Claude models with descriptions
 export const CLAUDE_MODELS = [
   {
     id: "claude-3-opus-20240229",
