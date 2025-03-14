@@ -33,6 +33,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Chatbot } from "@shared/schema";
 import { Settings2, MessageSquare, Brush, Code } from "lucide-react";
+import {PromptGenerator} from "@/components/prompt-generator"; // Assuming this component exists
 
 interface BotConfigFormProps {
   bot: Chatbot;
@@ -192,11 +193,17 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                     <FormItem>
                       <FormLabel>Prompt do Sistema</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          {...field} 
-                          className="min-h-[100px]"
-                          placeholder="Você é um assistente útil que..."
-                        />
+                        <div className="space-y-4">
+                          <Textarea 
+                            {...field} 
+                            className="min-h-[100px]"
+                            placeholder="Você é um assistente útil que..."
+                          />
+                          <PromptGenerator 
+                            onPromptGenerated={(prompt) => field.onChange(prompt)}
+                            currentPrompt={field.value}
+                          />
+                        </div>
                       </FormControl>
                       <FormDescription>
                         Define a personalidade e comportamento base do chatbot

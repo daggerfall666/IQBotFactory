@@ -404,6 +404,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Prompt generation endpoint
+  app.post("/api/generate-prompt", apiLimiter, async (req, res) => {
+    try {
+      const { mission } = req.body;
+
+      if (!mission || typeof mission !== 'string' || mission.length > 1000) {
+        console.error("Invalid mission:", mission);
+        res.status(400).json({ error: "Invalid mission format or length" });
+        return;
+      }
+
+      console.log("Generating prompt for mission:", mission);
+
+      const systemKey = await storage.getSystemSetting('ANTHROPIC_API_KEY');
+      if (!systemKey) {
+        console.error("No system API key available");
+        res.status(500).json({ error: "System API key not configured" });
+        return;
+      }
+
+      const anthropic = new Anthropic({ apiKey: systemKey });
+
+      const response = await anthropic.messages.create({
+        model: "claude-3-opus-20240229",
+        max_tokens: 1000,
+        temperature: 0.7,
+        messages: [
+          { 
+            role: "user", 
+            content: `As an AI expert, create an optimal system prompt for a chatbot with the following mission: "${mission}"
+
+The system prompt should:
+1. Be clear and specific about the chatbot's role and capabilities
+2. Include any necessary constraints or guidelines
+3. Define the tone and style of communication
+4. Incorporate best practices for chatbot interactions
+
+Format the response as a single, well-structured system prompt without any explanations or metadata.`
+          }
+        ],
+      });
+
+      const generatedPrompt = response.content[0].type === 'text' 
+        ? response.content[0].text 
+        : 'Error: Unexpected response format';
+
+      console.log("Generated prompt:", generatedPrompt);
+      res.json({ prompt: generatedPrompt });
+
+    } catch (err) {
+      console.error("Prompt generation error:", err);
+      res.status(500).json({ 
+        error: "Failed to generate prompt",
+        details: err instanceof Error ? err.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/improve-prompt", apiLimiter, async (req, res) => {
+    try {
+      const { currentPrompt } = req.body;
+
+      if (!currentPrompt || typeof currentPrompt !== 'string' || currentPrompt.length > 2000) {
+        console.error("Invalid prompt:", currentPrompt);
+        res.status(400).json({ error: "Invalid prompt format or length" });
+        return;
+      }
+
+      console.log("Improving prompt:", currentPrompt);
+
+      const systemKey = await storage.getSystemSetting('ANTHROPIC_API_KEY');
+      if (!systemKey) {
+        console.error("No system API key available");
+        res.status(500).json({ error: "System API key not configured" });
+        return;
+      }
+
+      const anthropic = new Anthropic({ apiKey: systemKey });
+
+      const response = await anthropic.messages.create({
+        model: "claude-3-opus-20240229",
+        max_tokens: 1000,
+        temperature: 0.7,
+        messages: [
+          { 
+            role: "user", 
+            content: `As an AI expert, analyze and improve the following chatbot system prompt:
+
+"${currentPrompt}"
+
+Enhance this prompt to:
+1. Make it more clear and specific about the chatbot's role
+2. Add any missing constraints or guidelines
+3. Improve the tone and communication style
+4. Add best practices for better interactions
+
+Return only the improved prompt without any explanations or metadata.`
+          }
+        ],
+      });
+
+      const improvedPrompt = response.content[0].type === 'text' 
+        ? response.content[0].text 
+        : 'Error: Unexpected response format';
+
+      console.log("Improved prompt:", improvedPrompt);
+      res.json({ prompt: improvedPrompt });
+
+    } catch (err) {
+      console.error("Prompt improvement error:", err);
+      res.status(500).json({ 
+        error: "Failed to improve prompt",
+        details: err instanceof Error ? err.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
