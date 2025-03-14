@@ -4,9 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ArrowLeft, Key, Activity, FileText, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 
 export default function AdminPage() {
   const [, navigate] = useLocation();
@@ -14,6 +15,16 @@ export default function AdminPage() {
   const [systemApiKey, setSystemApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Busca a chave API do sistema quando a página carrega
+  const { data: savedKey } = useQuery({
+    queryKey: ["/api/admin/system-key"],
+    onSuccess: (data) => {
+      if (data.key) {
+        setSystemApiKey(data.key);
+      }
+    }
+  });
 
   async function handleSaveApiKey() {
     if (!systemApiKey.trim()) return;
@@ -31,7 +42,10 @@ export default function AdminPage() {
         title: "Sucesso",
         description: "Chave API do sistema atualizada com sucesso"
       });
-      // Não limpa o input após sucesso para permitir visualização
+
+      // Atualiza a chave no cache
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/system-key"] });
+
     } catch (error: any) {
       toast({
         title: "Erro",

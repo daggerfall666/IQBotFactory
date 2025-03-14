@@ -15,7 +15,6 @@ const upload = multer({
 
 async function validateAnthropicKey(apiKey: string): Promise<boolean> {
   try {
-    // Verifica se a chave tem o formato correto
     if (!apiKey.startsWith('sk-ant-')) {
       console.error("Invalid API key format");
       return false;
@@ -23,7 +22,6 @@ async function validateAnthropicKey(apiKey: string): Promise<boolean> {
 
     const anthropic = new Anthropic({ apiKey });
 
-    // Tenta fazer uma chamada simples para validar a chave
     await anthropic.messages.create({
       model: "claude-3-haiku-20240307",
       max_tokens: 10,
@@ -39,7 +37,6 @@ async function validateAnthropicKey(apiKey: string): Promise<boolean> {
 
 async function getAnthropicClient(apiKey?: string | null) {
   try {
-    // Se apiKey for undefined ou null, usa a chave do sistema
     let key = apiKey;
     if (!key) {
       key = await storage.getSystemSetting('ANTHROPIC_API_KEY');
@@ -176,7 +173,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const endTime = Date.now();
         const responseTime = endTime - startTime;
 
-        // Registra a interação
         await db.insert(chatInteractions).values({
           botId,
           userMessage: message,
@@ -192,7 +188,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (err) {
         console.error("Chat error:", err);
 
-        // Registra a interação com erro
         await db.insert(chatInteractions).values({
           botId,
           userMessage: message,
@@ -241,19 +236,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // Busca todas as interações do bot
       const interactions = await db
         .select()
         .from(chatInteractions)
         .where(eq(chatInteractions.botId, botId));
 
-      // Calcula métricas
       const totalInteractions = interactions.length;
       const successfulInteractions = interactions.filter(i => i.success).length;
       const averageResponseTime = interactions.reduce((acc, i) => acc + i.responseTime, 0) / (totalInteractions || 1); 
       const totalTokensUsed = interactions.reduce((acc, i) => acc + i.tokensUsed, 0);
 
-      // Agrupa por dia para o gráfico de uso
       const usageByDay = interactions.reduce((acc, i) => {
         const date = new Date(i.timestamp).toISOString().split('T')[0];
         if (!acc[date]) acc[date] = 0;
@@ -291,7 +283,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // Valida a chave antes de salvar
       const isValid = await validateAnthropicKey(key);
       if (!isValid) {
         res.status(400).json({ 
@@ -301,7 +292,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // Salva a chave no banco de dados
       await storage.setSystemSetting('ANTHROPIC_API_KEY', key);
       console.log("System API key updated successfully");
 
@@ -310,6 +300,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating system API key:", err);
       res.status(500).json({ 
         error: "Erro ao atualizar a chave API do sistema",
+        details: err instanceof Error ? err.message : "Erro desconhecido"
+      });
+    }
+  });
+
+  // Novo endpoint para buscar a chave API do sistema
+  app.get("/api/admin/system-key", async (_req, res) => {
+    try {
+      const key = await storage.getSystemSetting('ANTHROPIC_API_KEY');
+      res.json({ key });
+    } catch (err) {
+      console.error("Error fetching system API key:", err);
+      res.status(500).json({ 
+        error: "Erro ao buscar a chave API do sistema",
         details: err instanceof Error ? err.message : "Erro desconhecido"
       });
     }
