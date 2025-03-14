@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Settings2, Database, Trash2 } from "lucide-react";
+import { Plus, Settings2, Database, Trash2, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Chatbot } from "@shared/schema";
@@ -36,15 +36,6 @@ export default function Home() {
   const { data: chatbots = [], isLoading, error } = useQuery<Chatbot[]>({
     queryKey: ["/api/chatbots"],
     staleTime: 1000 * 30, // 30 segundos
-    retry: 3,
-    onError: (err) => {
-      console.error("Error fetching chatbots:", err);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os chatbots",
-        variant: "destructive"
-      });
-    }
   });
 
   const createBot = useMutation({
@@ -158,6 +149,12 @@ export default function Home() {
               </p>
             </div>
             <div className="flex gap-2">
+              <Link href="/prompt-lab">
+                <Button variant="outline" size="lg">
+                  <Wand2 className="mr-2 h-5 w-5" />
+                  Laboratório de Prompts
+                </Button>
+              </Link>
               <Link href="/admin">
                 <Button variant="outline" size="lg">
                   <Settings2 className="mr-2 h-5 w-5" />
