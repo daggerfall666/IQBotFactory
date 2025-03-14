@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, MessageSquare, Zap, Clock, AlertTriangle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useToast } from "@/hooks/use-toast";
 
 interface Analytics {
   totalInteractions: number;
@@ -16,15 +17,39 @@ interface Analytics {
 export default function Dashboard() {
   const { id } = useParams();
   const [, navigate] = useLocation();
+  const { toast } = useToast();
 
-  const { data: analytics, isLoading } = useQuery<Analytics>({
+  const { data: analytics, isLoading, error } = useQuery<Analytics>({
     queryKey: [`/api/analytics/${id}`],
     refetchInterval: 30000, // Atualiza a cada 30 segundos
+    retry: 3,
+    onError: (err) => {
+      console.error("Error fetching analytics:", err);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as estatísticas",
+        variant: "destructive"
+      });
+    }
   });
 
   const { data: bot } = useQuery({
     queryKey: [`/api/chatbots/${id}`],
+    retry: 3
   });
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-destructive mb-4">Erro ao carregar estatísticas</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Tentar novamente
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !analytics) {
     return (
@@ -34,7 +59,7 @@ export default function Dashboard() {
     );
   }
 
-  const successRate = (analytics.successfulInteractions / analytics.totalInteractions) * 100;
+  const successRate = (analytics.successfulInteractions / analytics.totalInteractions) * 100 || 0;
 
   return (
     <div className="container mx-auto py-8">
@@ -108,41 +133,47 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent className="pt-6">
           <div className="h-[350px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={analytics.usageByDay}
-                margin={{
-                  top: 5,
-                  right: 10,
-                  left: 10,
-                  bottom: 0,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="date"
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `${value}`}
-                />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="interactions"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {analytics.usageByDay.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={analytics.usageByDay}
+                  margin={{
+                    top: 5,
+                    right: 10,
+                    left: 10,
+                    bottom: 0,
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#888888"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    stroke="#888888"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `${value}`}
+                  />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="interactions"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-muted-foreground">Nenhum dado disponível</p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
