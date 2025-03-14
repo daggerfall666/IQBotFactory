@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,6 +9,10 @@ import { ArrowLeft, Key, Activity, FileText, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 
+interface SystemKeyResponse {
+  key: string | null;
+}
+
 export default function AdminPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -17,14 +21,18 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Busca a chave API do sistema quando a página carrega
-  const { data: savedKey } = useQuery({
+  const { data: savedKey, isLoading: isLoadingKey } = useQuery<SystemKeyResponse>({
     queryKey: ["/api/admin/system-key"],
-    onSuccess: (data) => {
-      if (data.key) {
-        setSystemApiKey(data.key);
-      }
-    }
+    staleTime: 1000 * 60, // 1 minuto
+    retry: 3
   });
+
+  // Atualiza o input quando a chave é carregada
+  useEffect(() => {
+    if (savedKey?.key) {
+      setSystemApiKey(savedKey.key);
+    }
+  }, [savedKey]);
 
   async function handleSaveApiKey() {
     if (!systemApiKey.trim()) return;
@@ -104,9 +112,9 @@ export default function AdminPage() {
                       type={showApiKey ? "text" : "password"}
                       value={systemApiKey}
                       onChange={(e) => setSystemApiKey(e.target.value)}
-                      placeholder="sk-ant-..."
+                      placeholder={isLoadingKey ? "Carregando..." : "sk-ant-..."}
                       className="font-mono pr-10"
-                      disabled={isLoading}
+                      disabled={isLoading || isLoadingKey}
                     />
                     {systemApiKey && (
                       <Button
@@ -126,7 +134,7 @@ export default function AdminPage() {
                   </div>
                   <Button 
                     onClick={handleSaveApiKey} 
-                    disabled={!systemApiKey.trim() || isLoading}
+                    disabled={!systemApiKey.trim() || isLoading || isLoadingKey}
                   >
                     {isLoading ? "Salvando..." : "Salvar"}
                   </Button>
