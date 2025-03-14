@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Settings2, Database, Trash2, Loader2 } from "lucide-react";
+import { Plus, Settings2, Database, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Chatbot } from "@shared/schema";
@@ -26,17 +26,29 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Home() {
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newBotName, setNewBotName] = useState("");
 
+  // Log status da query para debug
   const { data: chatbots, isLoading, error } = useQuery<Chatbot[]>({
     queryKey: ["/api/chatbots"],
-    refetchInterval: 5000, // Recarrega a cada 5 segundos
+    refetchInterval: 5000,
+    onSuccess: (data) => {
+      console.log("Query success:", data);
+    },
+    onError: (err) => {
+      console.error("Query error:", err);
+    }
   });
+
+  // Log quando o componente renderiza
+  useEffect(() => {
+    console.log("Home component state:", { isLoading, error, chatbotsLength: chatbots?.length });
+  }, [isLoading, error, chatbots]);
 
   const createBot = useMutation({
     mutationFn: async (name: string) => {
@@ -108,7 +120,9 @@ export default function Home() {
     }
   });
 
+  // Se tiver um erro, mostra mensagem
   if (error) {
+    console.error("Render error:", error);
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -125,20 +139,20 @@ export default function Home() {
     );
   }
 
+  // Se estiver carregando, mostra loading
   if (isLoading) {
+    console.log("Rendering loading state");
     return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto py-12">
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-              <p className="text-muted-foreground">Carregando chatbots...</p>
-            </div>
-          </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <p className="text-muted-foreground">Carregando chatbots...</p>
         </div>
       </div>
     );
   }
+
+  // Log antes de renderizar o conteúdo principal
+  console.log("Rendering main content, chatbots:", chatbots);
 
   return (
     <div className="min-h-screen bg-background">
