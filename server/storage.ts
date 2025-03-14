@@ -1,110 +1,90 @@
-import { Chatbot, InsertChatbot, KnowledgeBase, InsertKnowledgeBase } from "@shared/schema";
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import { Chatbot, InsertChatbot, KnowledgeBase, InsertKnowledgeBase, chatbots, knowledgeBase } from "@shared/schema";
+import { eq } from 'drizzle-orm';
+
+const connectionString = process.env.DATABASE_URL!;
+const client = postgres(connectionString);
+const db = drizzle(client);
 
 export interface IStorage {
-  // Chatbot operations
   createChatbot(bot: InsertChatbot): Promise<Chatbot>;
   getChatbot(id: number): Promise<Chatbot | undefined>;
   listChatbots(): Promise<Chatbot[]>;
   updateChatbot(id: number, bot: Partial<InsertChatbot>): Promise<Chatbot | undefined>;
   deleteChatbot(id: number): Promise<boolean>;
 
-  // Knowledge base operations
   addKnowledgeBase(kb: InsertKnowledgeBase): Promise<KnowledgeBase>;
   getKnowledgeBase(id: number): Promise<KnowledgeBase | undefined>;
   listKnowledgeBase(botId: number): Promise<KnowledgeBase[]>;
   deleteKnowledgeBase(id: number): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private chatbots: Map<number, Chatbot>;
-  private knowledgeBase: Map<number, KnowledgeBase>;
-  private chatbotId: number;
-  private kbId: number;
-
-  constructor() {
-    this.chatbots = new Map();
-    this.knowledgeBase = new Map();
-    this.chatbotId = 1;
-    this.kbId = 1;
-  }
-
+export class PostgresStorage implements IStorage {
   async createChatbot(bot: InsertChatbot): Promise<Chatbot> {
-    const id = this.chatbotId++;
-    const chatbot: Chatbot = { 
-      id, 
-      name: bot.name,
-      description: bot.description || "",
-      settings: bot.settings,
-      wordpressConfig: bot.wordpressConfig,
-      apiKey: bot.apiKey
-    };
-    this.chatbots.set(id, chatbot);
+    const [chatbot] = await db.insert(chatbots).values(bot).returning();
     console.log("Created chatbot:", chatbot);
     return chatbot;
   }
 
   async getChatbot(id: number): Promise<Chatbot | undefined> {
-    const bot = this.chatbots.get(id);
-    console.log("Getting chatbot:", id, bot);
-    return bot;
+    const [chatbot] = await db.select().from(chatbots).where(eq(chatbots.id, id));
+    console.log("Getting chatbot:", id, chatbot);
+    return chatbot;
   }
 
   async listChatbots(): Promise<Chatbot[]> {
-    const bots = Array.from(this.chatbots.values());
-    console.log("Listing chatbots:", bots);
-    return bots;
+    const results = await db.select().from(chatbots);
+    console.log("Listing chatbots:", results);
+    return results;
   }
 
   async updateChatbot(id: number, bot: Partial<InsertChatbot>): Promise<Chatbot | undefined> {
-    const existing = this.chatbots.get(id);
-    if (!existing) return undefined;
-
-    const updated: Chatbot = {
-      ...existing,
-      name: bot.name || existing.name,
-      description: bot.description || existing.description,
-      settings: bot.settings || existing.settings,
-      wordpressConfig: bot.wordpressConfig || existing.wordpressConfig,
-      apiKey: bot.apiKey !== undefined ? bot.apiKey : existing.apiKey
-    };
-
-    this.chatbots.set(id, updated);
+    const [updated] = await db
+      .update(chatbots)
+      .set(bot)
+      .where(eq(chatbots.id, id))
+      .returning();
     console.log("Updated chatbot:", updated);
     return updated;
   }
 
   async deleteChatbot(id: number): Promise<boolean> {
-    const deleted = this.chatbots.delete(id);
-    console.log("Deleted chatbot:", id, deleted);
-    return deleted;
+    const [deleted] = await db
+      .delete(chatbots)
+      .where(eq(chatbots.id, id))
+      .returning();
+    console.log("Deleted chatbot:", id, !!deleted);
+    return !!deleted;
   }
 
   async addKnowledgeBase(kb: InsertKnowledgeBase): Promise<KnowledgeBase> {
-    const id = this.kbId++;
-    const entry: KnowledgeBase = {
-      id,
-      botId: kb.botId,
-      type: kb.type,
-      content: kb.content,
-      sourceUrl: kb.sourceUrl || null,
-      uploadedAt: new Date()
-    };
-    this.knowledgeBase.set(id, entry);
+    const [entry] = await db.insert(knowledgeBase).values(kb).returning();
     return entry;
   }
 
   async getKnowledgeBase(id: number): Promise<KnowledgeBase | undefined> {
-    return this.knowledgeBase.get(id);
+    const [entry] = await db
+      .select()
+      .from(knowledgeBase)
+      .where(eq(knowledgeBase.id, id));
+    return entry;
   }
 
   async listKnowledgeBase(botId: number): Promise<KnowledgeBase[]> {
-    return Array.from(this.knowledgeBase.values())
-      .filter(kb => kb.botId === botId);
+    return db
+      .select()
+      .from(knowledgeBase)
+      .where(eq(knowledgeBase.botId, botId));
   }
 
   async deleteKnowledgeBase(id: number): Promise<boolean> {
-    return this.knowledgeBase.delete(id);
+    const [deleted] = await db
+      .delete(knowledgeBase)
+      .where(eq(knowledgeBase.id, id))
+      .returning();
+    return !!deleted;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new PostgresStorage();
