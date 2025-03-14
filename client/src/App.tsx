@@ -8,6 +8,7 @@ import BotConfig from "@/pages/bot-config";
 import KnowledgeBase from "@/pages/knowledge-base";
 import Dashboard from "@/pages/dashboard";
 import Admin from "@/pages/admin";
+import PromptLab from "@/pages/prompt-lab";
 
 function Router() {
   return (
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/bot/:id/knowledge" component={KnowledgeBase} />
       <Route path="/bot/:id/dashboard" component={Dashboard} />
       <Route path="/admin" component={Admin} />
+      <Route path="/prompt-lab" component={PromptLab} />
       <Route component={NotFound} />
     </Switch>
   );

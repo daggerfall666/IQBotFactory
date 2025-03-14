@@ -521,6 +521,56 @@ Return only the improved prompt without any explanations or metadata.`
     }
   });
 
+  // Update the test-prompt endpoint to properly use Claude's message format
+  app.post("/api/test-prompt", apiLimiter, async (req, res) => {
+    try {
+      const { prompt } = req.body;
+
+      if (!prompt || typeof prompt !== 'string' || prompt.length > 2000) {
+        console.error("Invalid prompt:", prompt);
+        res.status(400).json({ error: "Invalid prompt format or length" });
+        return;
+      }
+
+      console.log("Testing prompt:", prompt);
+
+      const systemKey = await storage.getSystemSetting('ANTHROPIC_API_KEY');
+      if (!systemKey) {
+        console.error("No system API key available");
+        res.status(500).json({ error: "System API key not configured" });
+        return;
+      }
+
+      const anthropic = new Anthropic({ apiKey: systemKey });
+
+      const response = await anthropic.messages.create({
+        model: "claude-3-haiku-20240307",
+        max_tokens: 500,
+        temperature: 0.7,
+        messages: [
+          { 
+            role: "user", 
+            content: `${prompt}\n\nWith that context in mind, respond to this message: Hello! How can you help me today?`
+          }
+        ],
+      });
+
+      const previewResponse = response.content[0].type === 'text' 
+        ? response.content[0].text 
+        : 'Error: Unexpected response format';
+
+      console.log("Preview response:", previewResponse);
+      res.json({ response: previewResponse });
+
+    } catch (err) {
+      console.error("Prompt testing error:", err);
+      res.status(500).json({ 
+        error: "Failed to test prompt",
+        details: err instanceof Error ? err.message : "Unknown error"
+      });
+    }
+  });
+
   // Knowledge base endpoints with upload limiter
   app.post("/api/knowledge-base", uploadLimiter, upload.single('file'), async (req, res) => {
     try {
