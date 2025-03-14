@@ -2,12 +2,33 @@ import { pgTable, text, serial, integer, jsonb, timestamp, boolean } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Add DEFAULT_RATE_LIMITS constant
+export const DEFAULT_RATE_LIMITS: RateLimitConfig = {
+  api: {
+    windowMs: 60000, // 1 minute
+    max: 100
+  },
+  chat: {
+    windowMs: 60000,
+    max: 30
+  },
+  admin: {
+    windowMs: 60000,
+    max: 20
+  },
+  upload: {
+    windowMs: 60000,
+    max: 10
+  }
+};
+
 // Adicionar nova tabela para configurações do sistema
 export const systemSettings = pgTable("system_settings", {
   id: serial("id").primaryKey(),
   key: text("key").notNull(),
   value: text("value").notNull(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  rateLimits: jsonb("rate_limits").$type<RateLimitConfig>().default(DEFAULT_RATE_LIMITS)
 });
 
 export const chatbots = pgTable("chatbots", {
@@ -70,11 +91,11 @@ export const insertChatbotSchema = createInsertSchema(chatbots, {
 
 export const insertKnowledgeBaseSchema = createInsertSchema(knowledgeBase).omit({ id: true, uploadedAt: true });
 
-export const insertChatInteractionSchema = createInsertSchema(chatInteractions).omit({ 
-  id: true, 
+export const insertChatInteractionSchema = createInsertSchema(chatInteractions).omit({
+  id: true,
   timestamp: true,
   success: true,
-  errorMessage: true 
+  errorMessage: true
 });
 
 export type Chatbot = typeof chatbots.$inferSelect;
@@ -107,7 +128,29 @@ export const CLAUDE_MODELS = [
 
 export type SystemSetting = typeof systemSettings.$inferSelect;
 
-export const insertSystemSettingSchema = createInsertSchema(systemSettings).omit({ 
+export const insertSystemSettingSchema = createInsertSchema(systemSettings).omit({
   id: true,
   updatedAt: true
 });
+
+// Rate limit configuration type
+export const rateLimitConfigSchema = z.object({
+  api: z.object({
+    windowMs: z.number(),
+    max: z.number(),
+  }),
+  chat: z.object({
+    windowMs: z.number(),
+    max: z.number(),
+  }),
+  admin: z.object({
+    windowMs: z.number(),
+    max: z.number(),
+  }),
+  upload: z.object({
+    windowMs: z.number(),
+    max: z.number(),
+  })
+});
+
+export type RateLimitConfig = z.infer<typeof rateLimitConfigSchema>;

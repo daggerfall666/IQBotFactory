@@ -541,6 +541,68 @@ Return only the improved prompt without any explanations or metadata.`
     }
   });
 
+  // Get rate limit configuration
+  app.get("/api/admin/rate-limits", adminLimiter, async (_req, res) => {
+    try {
+      const config = {
+        api: {
+          windowMs: parseInt(await storage.getSystemSetting('RATE_LIMIT_API_WINDOW') || '60000'),
+          max: parseInt(await storage.getSystemSetting('RATE_LIMIT_API_MAX') || '100')
+        },
+        chat: {
+          windowMs: parseInt(await storage.getSystemSetting('RATE_LIMIT_CHAT_WINDOW') || '60000'),
+          max: parseInt(await storage.getSystemSetting('RATE_LIMIT_CHAT_MAX') || '30')
+        },
+        admin: {
+          windowMs: parseInt(await storage.getSystemSetting('RATE_LIMIT_ADMIN_WINDOW') || '60000'),
+          max: parseInt(await storage.getSystemSetting('RATE_LIMIT_ADMIN_MAX') || '20')
+        },
+        upload: {
+          windowMs: parseInt(await storage.getSystemSetting('RATE_LIMIT_UPLOAD_WINDOW') || '60000'),
+          max: parseInt(await storage.getSystemSetting('RATE_LIMIT_UPLOAD_MAX') || '10')
+        }
+      };
+
+      res.json({ config });
+    } catch (err) {
+      console.error("Error fetching rate limit config:", err);
+      res.status(500).json({ 
+        error: "Failed to fetch rate limit configuration",
+        details: err instanceof Error ? err.message : "Unknown error"
+      });
+    }
+  });
+
+  // Update rate limit configuration
+  app.post("/api/admin/rate-limits", adminLimiter, async (req, res) => {
+    try {
+      const config = rateLimitConfigSchema.parse(req.body);
+
+      // Save all settings
+      await Promise.all([
+        storage.setSystemSetting('RATE_LIMIT_API_WINDOW', config.api.windowMs.toString()),
+        storage.setSystemSetting('RATE_LIMIT_API_MAX', config.api.max.toString()),
+        storage.setSystemSetting('RATE_LIMIT_CHAT_WINDOW', config.chat.windowMs.toString()),
+        storage.setSystemSetting('RATE_LIMIT_CHAT_MAX', config.chat.max.toString()),
+        storage.setSystemSetting('RATE_LIMIT_ADMIN_WINDOW', config.admin.windowMs.toString()),
+        storage.setSystemSetting('RATE_LIMIT_ADMIN_MAX', config.admin.max.toString()),
+        storage.setSystemSetting('RATE_LIMIT_UPLOAD_WINDOW', config.upload.windowMs.toString()),
+        storage.setSystemSetting('RATE_LIMIT_UPLOAD_MAX', config.upload.max.toString())
+      ]);
+
+      // Log the update
+      console.log("Rate limit configuration updated:", config);
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error updating rate limit config:", err);
+      res.status(500).json({ 
+        error: "Failed to update rate limit configuration",
+        details: err instanceof Error ? err.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
