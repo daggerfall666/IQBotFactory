@@ -17,9 +17,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
 
 export default function Home() {
   const { toast } = useToast();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newBotName, setNewBotName] = useState("");
 
   const { data: chatbots, isLoading, error } = useQuery<Chatbot[]>({
     queryKey: ["/api/chatbots"],
@@ -27,9 +39,9 @@ export default function Home() {
   });
 
   const createBot = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (name: string) => {
       const defaultBot: Omit<Chatbot, "id"> = {
-        name: "Novo Chatbot",
+        name,
         description: "",
         settings: {
           initialMessage: "Olá! Como posso ajudar?",
@@ -60,6 +72,8 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chatbots"] });
+      setIsCreateDialogOpen(false);
+      setNewBotName("");
       toast({
         title: "Sucesso",
         description: "Novo chatbot criado"
@@ -136,13 +150,12 @@ export default function Home() {
               </p>
             </div>
             <Button 
-              onClick={() => createBot.mutate()} 
-              disabled={createBot.isPending}
+              onClick={() => setIsCreateDialogOpen(true)}
               size="lg"
               className="shadow-lg hover:shadow-primary/20 transition-all"
             >
               <Plus className="mr-2 h-5 w-5" />
-              {createBot.isPending ? "Criando..." : "Criar Novo Bot"}
+              Criar Novo Bot
             </Button>
           </div>
 
@@ -156,7 +169,7 @@ export default function Home() {
                 <p className="text-muted-foreground mb-4">
                   Comece criando seu primeiro chatbot para interagir com seus visitantes
                 </p>
-                <Button onClick={() => createBot.mutate()} disabled={createBot.isPending}>
+                <Button onClick={() => setIsCreateDialogOpen(true)} disabled={createBot.isPending}>
                   <Plus className="mr-2 h-4 w-4" />
                   Criar Primeiro Bot
                 </Button>
@@ -231,6 +244,36 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar Novo Chatbot</DialogTitle>
+            <DialogDescription>
+              Digite um nome para seu novo chatbot.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Nome do chatbot"
+              value={newBotName}
+              onChange={(e) => setNewBotName(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && newBotName.trim() && createBot.mutate(newBotName)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => newBotName.trim() && createBot.mutate(newBotName)}
+              disabled={!newBotName.trim() || createBot.isPending}
+            >
+              {createBot.isPending ? "Criando..." : "Criar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
