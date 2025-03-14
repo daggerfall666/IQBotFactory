@@ -32,7 +32,7 @@ export default function AdminPage() {
 
   const { data: savedKey, isLoading: isLoadingKey } = useQuery<SystemKeyResponse>({
     queryKey: ["/api/admin/system-key"],
-    staleTime: 1000 * 60, 
+    staleTime: 1000 * 60,
     retry: 3
   });
 
@@ -83,7 +83,7 @@ export default function AdminPage() {
         description: error.message || t('admin.errors.api_key.save_failed'),
         variant: "destructive"
       });
-      setSystemApiKey(""); 
+      setSystemApiKey("");
     } finally {
       setIsLoading(false);
     }
@@ -134,44 +134,44 @@ export default function AdminPage() {
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" onClick={() => navigate("/")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          {t('admin.buttons.back')}
+          Voltar
         </Button>
-        <h1 className="text-4xl font-bold">{t('admin.title')}</h1>
+        <h1 className="text-4xl font-bold">Configurações do Sistema</h1>
       </div>
 
       <Tabs defaultValue="api" className="space-y-6">
         <TabsList>
           <TabsTrigger value="api" className="flex items-center gap-2">
             <Key className="w-4 h-4" />
-            {t('admin.tabs.api')}
+            Chave API
           </TabsTrigger>
           <TabsTrigger value="rate-limits" className="flex items-center gap-2">
             <Shield className="w-4 h-4" />
-            {t('admin.tabs.rate_limits')}
+            Limites de Requisição
           </TabsTrigger>
           <TabsTrigger value="logs" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
-            {t('admin.tabs.logs')}
+            Logs
           </TabsTrigger>
           <TabsTrigger value="stats" className="flex items-center gap-2">
             <Activity className="w-4 h-4" />
-            {t('admin.tabs.stats')}
+            Estatísticas
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="api">
           <Card>
             <CardHeader>
-              <CardTitle>{t('admin.api.title')}</CardTitle>
+              <CardTitle>Chave API do Sistema</CardTitle>
               <CardDescription>
-                {t('admin.api.description')}
+                Configure a chave API padrão do sistema para o Claude AI
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <h3 className="font-medium">{t('admin.api.apikey.title')}</h3>
+                <h3 className="font-medium">Chave API do Anthropic</h3>
                 <p className="text-sm text-muted-foreground">
-                  {t('admin.api.apikey.description')}
+                  Esta chave será usada como padrão para todos os chatbots que não possuem uma chave personalizada
                 </p>
                 <div className="flex gap-2">
                   <div className="flex-1 relative">
@@ -203,7 +203,7 @@ export default function AdminPage() {
                     onClick={handleSaveApiKey} 
                     disabled={!systemApiKey.trim() || isLoading || isLoadingKey}
                   >
-                    {isLoading ? t('admin.buttons.saving') : t('admin.buttons.save')}
+                    {isLoading ? "Salvando..." : "Salvar"}
                   </Button>
                 </div>
               </div>
@@ -271,18 +271,18 @@ export default function AdminPage() {
         <TabsContent value="rate-limits">
           <Card>
             <CardHeader>
-              <CardTitle>{t('admin.rate_limits.title')}</CardTitle>
+              <CardTitle>Limites de Requisição</CardTitle>
               <CardDescription>
-                {t('admin.rate_limits.description')}
+                Configure os limites de requisição para diferentes tipos de operações
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <h3 className="font-medium">{t('admin.rate_limits.api.title')}</h3>
+                <h3 className="font-medium">API Geral</h3>
                 <div className="space-y-8">
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm">{t('admin.rate_limits.max_requests')}</span>
+                      <span className="text-sm">Máximo de requisições</span>
                       <span className="text-sm font-mono">{rateLimits.api.max}</span>
                     </div>
                     <Slider
@@ -442,7 +442,7 @@ export default function AdminPage() {
                   onClick={handleSaveRateLimits}
                   disabled={isUpdatingLimits || isLoadingLimits}
                 >
-                  {isUpdatingLimits ? t('admin.buttons.saving') : t('admin.buttons.save')}
+                  {isUpdatingLimits ? "Salvando..." : "Salvar Configurações"}
                 </Button>
               </div>
             </CardContent>
