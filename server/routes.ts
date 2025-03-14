@@ -166,6 +166,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin routes
+  app.post("/api/admin/system-key", async (req, res) => {
+    try {
+      const { key } = req.body;
+
+      if (!key || typeof key !== "string" || !key.startsWith("sk-ant-")) {
+        res.status(400).json({ error: "Invalid API key format" });
+        return;
+      }
+
+      // Atualiza a variável de ambiente
+      process.env.ANTHROPIC_API_KEY = key;
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error updating system API key:", err);
+      res.status(500).json({ error: "Failed to update system API key" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

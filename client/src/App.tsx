@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import BotConfig from "@/pages/bot-config";
 import KnowledgeBase from "@/pages/knowledge-base";
+import Admin from "@/pages/admin";
 
 function Router() {
   return (
@@ -13,6 +14,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/bot/:id" component={BotConfig} />
       <Route path="/bot/:id/knowledge" component={KnowledgeBase} />
+      <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>
   );

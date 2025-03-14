@@ -167,14 +167,22 @@ export default function Home() {
                 Gerencie e configure seus assistentes virtuais
               </p>
             </div>
-            <Button 
-              onClick={() => setIsCreateDialogOpen(true)}
-              size="lg"
-              className="shadow-lg hover:shadow-primary/20 transition-all"
-            >
-              <Plus className="mr-2 h-5 w-5" />
-              Criar Novo Bot
-            </Button>
+            <div className="flex gap-2">
+              <Link href="/admin">
+                <Button variant="outline" size="lg">
+                  <Settings2 className="mr-2 h-5 w-5" />
+                  Admin
+                </Button>
+              </Link>
+              <Button 
+                onClick={() => setIsCreateDialogOpen(true)}
+                size="lg"
+                className="shadow-lg hover:shadow-primary/20 transition-all"
+              >
+                <Plus className="mr-2 h-5 w-5" />
+                Criar Novo Bot
+              </Button>
+            </div>
           </div>
 
           {!chatbots || chatbots.length === 0 ? (
