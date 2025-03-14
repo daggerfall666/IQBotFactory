@@ -81,38 +81,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Knowledge base endpoints
-  app.post("/api/knowledge-base", upload.single("file"), async (req, res) => {
-    try {
-      if (!req.file) {
-        res.status(400).json({ error: "No file uploaded" });
-        return;
-      }
-
-      const content = req.file.buffer.toString();
-      const entry = insertKnowledgeBaseSchema.parse({
-        botId: parseInt(req.body.botId),
-        type: "document",
-        content,
-        sourceUrl: null
-      });
-
-      const kb = await storage.addKnowledgeBase(entry);
-      res.json(kb);
-    } catch (err) {
-      if (err instanceof ZodError) {
-        res.status(400).json({ error: err.errors });
-      } else {
-        res.status(500).json({ error: "Failed to add knowledge base entry" });
-      }
-    }
-  });
-
-  app.get("/api/knowledge-base/:botId", async (req, res) => {
-    const entries = await storage.listKnowledgeBase(parseInt(req.params.botId));
-    res.json(entries);
-  });
-
   // Chat endpoint
   app.post("/api/chat/:botId", async (req, res) => {
     try {

@@ -37,13 +37,16 @@ export const chatbots = pgTable("chatbots", {
 export const knowledgeBase = pgTable("knowledge_base", {
   id: serial("id").primaryKey(),
   botId: integer("bot_id").notNull(),
-  type: text("type").notNull(), // 'document' | 'website'
+  type: text("type").notNull(),
   content: text("content").notNull(),
   sourceUrl: text("source_url"),
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
 });
 
-export const insertChatbotSchema = createInsertSchema(chatbots).omit({ id: true });
+export const insertChatbotSchema = createInsertSchema(chatbots, {
+  apiKey: z.string().nullable(),
+}).omit({ id: true });
+
 export const insertKnowledgeBaseSchema = createInsertSchema(knowledgeBase).omit({ id: true, uploadedAt: true });
 
 export type Chatbot = typeof chatbots.$inferSelect;

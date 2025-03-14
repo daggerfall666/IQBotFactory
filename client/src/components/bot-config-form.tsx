@@ -114,13 +114,30 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                   name="apiKey"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Chave API da Anthropic (Opcional)</FormLabel>
-                      <FormControl>
-                        <Input type="password" {...field} placeholder="sk-ant-..." />
-                      </FormControl>
-                      <FormDescription>
-                        Use sua própria chave API ou deixe em branco para usar a chave padrão
-                      </FormDescription>
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <FormLabel>Usar Chave API Personalizada</FormLabel>
+                          <FormDescription>
+                            Use sua própria chave API ou a chave padrão do sistema
+                          </FormDescription>
+                        </div>
+                        <Switch
+                          checked={field.value !== null}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked ? "" : null);
+                          }}
+                        />
+                      </div>
+                      {field.value !== null && (
+                        <FormControl>
+                          <Input 
+                            type="password" 
+                            {...field} 
+                            placeholder="sk-ant-..."
+                            className="font-mono"
+                          />
+                        </FormControl>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
