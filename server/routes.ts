@@ -131,18 +131,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { message } = req.body;
       if (!message || typeof message !== 'string' || message.length > 2000) {
+        console.error("Invalid message:", message);
         res.status(400).json({ error: "Invalid message format or length" });
         return;
       }
 
       const botId = parseInt(req.params.botId);
       if (isNaN(botId)) {
+        console.error("Invalid bot ID:", req.params.botId);
         res.status(400).json({ error: "Invalid bot ID" });
         return;
       }
 
       const bot = await storage.getChatbot(botId);
       if (!bot) {
+        console.error("Chatbot not found:", botId);
         res.status(404).json({ error: "Chatbot not found" });
         return;
       }
@@ -150,11 +153,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const kb = await storage.listKnowledgeBase(botId);
       const context = kb.map(entry => entry.content).join("\n\n");
 
-      console.log("Using API key:", bot.apiKey ? "Bot's own key" : "System key");
+      console.log("Processing chat request:", {
+        botId,
+        messageLength: message.length,
+        hasContext: !!context
+      });
 
       try {
         const startTime = Date.now();
         const anthropic = await getAnthropicClient(bot.apiKey);
+
+        console.log("Making API request with model:", bot.settings.model);
 
         const response = await anthropic.messages.create({
           model: bot.settings.model,
@@ -178,7 +187,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? response.content[0].text 
           : 'Error: Unexpected response format';
 
-        await db.insert(chatInteractions).values({
+        console.log("Chat interaction stats:", {
+          responseTime,
+          tokensUsed: response.usage?.output_tokens || 0,
+          responseLength: botResponse.length
+        });
+
+        // Registrar a interação
+        const chatInteraction = await db.insert(chatInteractions).values({
           botId,
           userMessage: message,
           botResponse,
@@ -187,7 +203,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           responseTime,
           success: true,
           timestamp: new Date() 
-        });
+        }).returning();
+
+        console.log("Saved chat interaction:", chatInteraction);
 
         res.json({ response: botResponse });
       } catch (err) {
