@@ -1,12 +1,12 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertChatbotSchema, insertKnowledgeBaseSchema } from "@shared/schema";
+import { insertChatbotSchema, insertKnowledgeBaseSchema, rateLimitConfigSchema } from "@shared/schema";
 import { ZodError } from "zod";
 import multer from "multer";
 import Anthropic from "@anthropic-ai/sdk";
 import { db, chatInteractions } from './db';
-import { eq } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { apiLimiter, chatLimiter, adminLimiter, uploadLimiter } from './middleware/rateLimiter';
 
 const upload = multer({ 
@@ -606,23 +606,27 @@ Return only the improved prompt without any explanations or metadata.`
   // Get system logs
   app.get("/api/admin/logs", adminLimiter, async (_req, res) => {
     try {
-      // Get the last 1000 lines from the server logs
-      const logs = (await db.query(`
-        SELECT 
-          CASE 
-            WHEN error_message IS NOT NULL THEN 'error'
-            WHEN success = false THEN 'warning'
-            ELSE 'info'
-          END as level,
-          CASE
-            WHEN error_message IS NOT NULL THEN error_message
-            ELSE 'Chat interaction: ' || user_message
-          END as message,
-          timestamp
-        FROM chat_interactions
-        ORDER BY timestamp DESC
-        LIMIT 1000
-      `)).rows;
+      // Get the last 1000 chat interactions ordered by timestamp
+      const logs = await db
+        .select({
+          level: sql`
+            CASE 
+              WHEN error_message IS NOT NULL THEN 'error'
+              WHEN success = false THEN 'warning'
+              ELSE 'info'
+            END
+          `.as('level'),
+          message: sql`
+            CASE
+              WHEN error_message IS NOT NULL THEN error_message
+              ELSE CONCAT('Chat interaction: ', user_message)
+            END
+          `.as('message'),
+          timestamp: chatInteractions.timestamp
+        })
+        .from(chatInteractions)
+        .orderBy(desc(chatInteractions.timestamp))
+        .limit(1000);
 
       res.json(logs);
     } catch (err) {
