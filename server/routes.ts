@@ -282,7 +282,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { key } = req.body;
 
       if (!key || typeof key !== "string" || !key.startsWith("sk-ant-")) {
-        res.status(400).json({ error: "Invalid API key format" });
+        res.status(400).json({ 
+          error: "Formato de chave API inválido",
+          details: "A chave API deve começar com 'sk-ant-'" 
+        });
         return;
       }
 
@@ -290,7 +293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isValid = await validateAnthropicKey(key);
       if (!isValid) {
         res.status(400).json({ 
-          error: "Chave API inválida. Por favor, verifique se a chave está correta e tente novamente.",
+          error: "Chave API inválida",
           details: "A chave API fornecida não é válida ou está expirada."
         });
         return;
@@ -298,19 +301,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Atualiza a variável de ambiente
       process.env.ANTHROPIC_API_KEY = key;
+      console.log("System API key updated successfully");
 
-      // Atualiza todos os bots que usam a chave do sistema (apiKey = null)
-      try {
-        const bots = await storage.listChatbots();
-        for (const bot of bots) {
-          if (bot.apiKey === null) {
-            await storage.updateChatbot(bot.id, { apiKey: null });
-          }
-        }
-      } catch (err) {
-        console.error("Error updating bots:", err);
-        // Não retorna erro aqui pois a chave já foi atualizada
-      }
+      // Não precisa atualizar os bots pois eles já estão com apiKey: null
+      // e continuarão usando a chave do sistema
 
       res.json({ success: true });
     } catch (err) {
