@@ -11,8 +11,10 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-// the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
 async function getAnthropicClient(apiKey?: string | null) {
+  if (!apiKey && !process.env.ANTHROPIC_API_KEY) {
+    throw new Error("No API key provided");
+  }
   return new Anthropic({
     apiKey: apiKey || process.env.ANTHROPIC_API_KEY
   });
@@ -115,7 +117,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/chat/:botId", async (req, res) => {
     try {
       const { message } = req.body;
+      if (!message || typeof message !== 'string' || message.length > 2000) {
+        res.status(400).json({ error: "Invalid message format or length" });
+        return;
+      }
+
       const botId = parseInt(req.params.botId);
+      if (isNaN(botId)) {
+        res.status(400).json({ error: "Invalid bot ID" });
+        return;
+      }
 
       const bot = await storage.getChatbot(botId);
       if (!bot) {
@@ -145,10 +156,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ response: response.content[0].text });
     } catch (err) {
       console.error("Chat error:", err);
-      res.status(500).json({ 
-        error: "Failed to process chat message",
-        details: err instanceof Error ? err.message : undefined
-      });
+      if (err instanceof Anthropic.APIError) {
+        res.status(err.status || 500).json({
+          error: "AI Service Error",
+          details: err.message
+        });
+      } else if (err instanceof Error) {
+        res.status(500).json({
+          error: "Internal Server Error",
+          details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+      } else {
+        res.status(500).json({ error: "Unknown error occurred" });
+      }
     }
   });
 
