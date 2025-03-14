@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Settings2, Database, Trash2, Wand2 } from "lucide-react";
+import { Plus, Settings2, Database, Trash2, Wand2, Bot, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Chatbot } from "@shared/schema";
@@ -35,7 +35,7 @@ export default function Home() {
 
   const { data: chatbots = [], isLoading, error } = useQuery<Chatbot[]>({
     queryKey: ["/api/chatbots"],
-    staleTime: 1000 * 30, // 30 segundos
+    staleTime: 1000 * 30,
   });
 
   const createBot = useMutation({
@@ -129,6 +129,7 @@ export default function Home() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
+          <Bot className="h-16 w-16 animate-bounce text-primary/60 mb-4" />
           <p className="text-muted-foreground">Carregando chatbots...</p>
         </div>
       </div>
@@ -139,24 +140,25 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-12">
         <div className="flex flex-col gap-8">
+          {/* Header Section */}
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                 Seus Chatbots
               </h1>
-              <p className="text-muted-foreground mt-2">
+              <p className="text-muted-foreground mt-2 text-lg">
                 Gerencie e configure seus assistentes virtuais
               </p>
             </div>
             <div className="flex gap-2">
               <Link href="/prompt-lab">
-                <Button variant="outline" size="lg">
+                <Button variant="outline" size="lg" className="shadow hover:shadow-md transition-all">
                   <Wand2 className="mr-2 h-5 w-5" />
                   Laboratório de Prompts
                 </Button>
               </Link>
               <Link href="/admin">
-                <Button variant="outline" size="lg">
+                <Button variant="outline" size="lg" className="shadow hover:shadow-md transition-all">
                   <Settings2 className="mr-2 h-5 w-5" />
                   Admin
                 </Button>
@@ -164,7 +166,7 @@ export default function Home() {
               <Button 
                 onClick={() => setIsCreateDialogOpen(true)}
                 size="lg"
-                className="shadow-lg hover:shadow-primary/20 transition-all"
+                className="shadow-lg hover:shadow-primary/20 transition-all bg-primary text-primary-foreground"
               >
                 <Plus className="mr-2 h-5 w-5" />
                 Criar Novo Bot
@@ -172,18 +174,25 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Content Section */}
           {chatbots.length === 0 ? (
             <Card className="p-12 border-dashed">
               <div className="text-center">
-                <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                  <Plus className="h-6 w-6 text-primary" />
+                <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                  <Bot className="h-10 w-10 text-primary" />
                 </div>
-                <h2 className="text-lg font-semibold mb-2">Nenhum chatbot criado</h2>
-                <p className="text-muted-foreground mb-4">
-                  Comece criando seu primeiro chatbot para interagir com seus visitantes
+                <h2 className="text-2xl font-semibold mb-3">Nenhum chatbot criado</h2>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  Comece criando seu primeiro chatbot para interagir com seus visitantes. 
+                  É fácil e rápido!
                 </p>
-                <Button onClick={() => setIsCreateDialogOpen(true)} disabled={createBot.isPending}>
-                  <Plus className="mr-2 h-4 w-4" />
+                <Button 
+                  onClick={() => setIsCreateDialogOpen(true)} 
+                  disabled={createBot.isPending}
+                  size="lg"
+                  className="shadow-lg hover:shadow-primary/20 transition-all"
+                >
+                  <Plus className="mr-2 h-5 w-5" />
                   Criar Primeiro Bot
                 </Button>
               </div>
@@ -191,16 +200,27 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {chatbots.map((bot) => (
-                <Card key={bot.id} className="hover:shadow-lg transition-all">
+                <Card 
+                  key={bot.id} 
+                  className="group hover:shadow-lg transition-all border-muted bg-gradient-to-b from-background to-muted/20"
+                >
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle>{bot.name}</CardTitle>
-                        <CardDescription>{bot.description || "Sem descrição"}</CardDescription>
+                        <CardTitle className="group-hover:text-primary transition-colors">
+                          {bot.name}
+                        </CardTitle>
+                        <CardDescription>
+                          {bot.description || "Sem descrição"}
+                        </CardDescription>
                       </div>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
@@ -225,10 +245,10 @@ export default function Home() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div className="text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Settings2 className="h-4 w-4" />
+                    <div className="space-y-6">
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4" />
                           Modelo: {bot.settings.model.split("-").pop()}
                         </div>
                         <div className="flex items-center gap-2">
@@ -237,15 +257,21 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <div className="flex gap-2">
-                        <Link href={`/bot/${bot.id}`} className="flex-1">
-                          <Button variant="secondary" className="w-full">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Link href={`/bot/${bot.id}`} className="col-span-2">
+                          <Button variant="default" className="w-full shadow hover:shadow-md transition-all">
+                            <Settings2 className="mr-2 h-4 w-4" />
                             Configurar
                           </Button>
                         </Link>
-                        <Link href={`/bot/${bot.id}/knowledge`} className="flex-1">
-                          <Button variant="outline" className="w-full">
+                        <Link href={`/bot/${bot.id}/knowledge`}>
+                          <Button variant="outline" className="w-full shadow hover:shadow-md transition-all">
                             Base de Conhecimento
+                          </Button>
+                        </Link>
+                        <Link href={`/bot/${bot.id}/dashboard`}>
+                          <Button variant="outline" className="w-full shadow hover:shadow-md transition-all">
+                            Dashboard
                           </Button>
                         </Link>
                       </div>
@@ -258,12 +284,13 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Create Bot Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Criar Novo Chatbot</DialogTitle>
             <DialogDescription>
-              Digite um nome para seu novo chatbot.
+              Digite um nome para seu novo chatbot. Você poderá personalizar outras configurações depois.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -271,6 +298,7 @@ export default function Home() {
               placeholder="Nome do chatbot"
               value={newBotName}
               onChange={(e) => setNewBotName(e.target.value)}
+              className="h-12"
               onKeyPress={(e) => e.key === "Enter" && newBotName.trim() && createBot.mutate(newBotName)}
             />
           </div>
@@ -281,6 +309,7 @@ export default function Home() {
             <Button 
               onClick={() => newBotName.trim() && createBot.mutate(newBotName)}
               disabled={!newBotName.trim() || createBot.isPending}
+              className="shadow hover:shadow-md transition-all"
             >
               {createBot.isPending ? "Criando..." : "Criar"}
             </Button>

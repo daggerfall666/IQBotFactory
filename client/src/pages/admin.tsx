@@ -17,7 +17,8 @@ import {
   Info, 
   AlertTriangle,
   CopyIcon,
-  CheckCircle
+  CheckCircle,
+  Home
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -31,6 +32,14 @@ import {
 } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { 
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 interface SystemKeyResponse {
   key: string | null;
@@ -341,26 +350,38 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8">
-        <div className="flex items-center gap-4 mb-8">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate("/")}
-            className="hover:bg-secondary"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Configurações do Sistema
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Gerencie as configurações globais da plataforma
-            </p>
-          </div>
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/" className="flex items-center gap-2">
+                  <Home className="h-4 w-4" />
+                  Início
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Configurações do Sistema</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+      </div>
+
+      <div className="container py-8 space-y-8">
+        {/* Header Section */}
+        <div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            Configurações do Sistema
+          </h1>
+          <p className="text-muted-foreground mt-2 text-lg">
+            Gerencie as configurações globais da plataforma de forma centralizada
+          </p>
         </div>
 
+        {/* Main Navigation */}
         <Tabs 
           value={activeTab} 
           onValueChange={setActiveTab}
@@ -369,314 +390,352 @@ export default function AdminPage() {
           <TabsList className="grid w-full grid-cols-4 lg:w-auto gap-2 p-2">
             <TabsTrigger 
               value="api" 
-              className="flex items-center gap-2 min-w-[140px]"
+              className="flex items-center gap-2 min-w-[140px] transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             >
               <Key className="w-4 h-4" />
               Chave API
             </TabsTrigger>
             <TabsTrigger 
               value="rate-limits"
-              className="flex items-center gap-2 min-w-[140px]"
+              className="flex items-center gap-2 min-w-[140px] transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             >
               <Shield className="w-4 h-4" />
               Limites
             </TabsTrigger>
             <TabsTrigger 
               value="logs"
-              className="flex items-center gap-2 min-w-[140px]"
+              className="flex items-center gap-2 min-w-[140px] transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             >
               <FileText className="w-4 h-4" />
               Logs
             </TabsTrigger>
             <TabsTrigger 
               value="stats"
-              className="flex items-center gap-2 min-w-[140px]"
+              className="flex items-center gap-2 min-w-[140px] transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             >
               <Activity className="w-4 h-4" />
               Estatísticas
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="api">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Key className="h-5 w-5 text-primary" />
-                  Chave API do Sistema
-                </CardTitle>
-                <CardDescription>
-                  Configure a chave API padrão do sistema para o Claude AI
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium flex items-center gap-2">
-                      Chave API do Anthropic
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-4 w-4 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="max-w-xs">
-                              Esta chave será usada como padrão para todos os chatbots 
-                              que não possuem uma chave personalizada
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </h3>
+          {/* Tab Contents */}
+          <div className="mt-4 transition-all">
+            <TabsContent value="api" className="space-y-6">
+              <Card className="border-none shadow-lg">
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <Key className="h-6 w-6 text-primary" />
+                    Chave API do Sistema
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    Configure a chave API padrão do sistema para o Claude AI
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium flex items-center gap-2">
+                        Chave API do Anthropic
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-4 w-4 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs">
+                                Esta chave será usada como padrão para todos os chatbots 
+                                que não possuem uma chave personalizada
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </h3>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          type={showApiKey ? "text" : "password"}
+                          value={systemApiKey}
+                          onChange={(e) => setSystemApiKey(e.target.value)}
+                          placeholder={isLoadingKey ? "Carregando..." : "sk-ant-..."}
+                          className={cn(
+                            "font-mono pr-20 text-lg h-12",
+                            systemApiKey && !systemApiKey.startsWith('sk-ant-') && 'border-destructive focus-visible:ring-destructive'
+                          )}
+                          disabled={isLoading || isLoadingKey}
+                        />
+                        <div className="absolute right-0 top-0 h-full flex items-center gap-1 pr-2">
+                          {systemApiKey && (
+                            <>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9 hover:bg-muted transition-colors"
+                                onClick={() => setShowApiKey(!showApiKey)}
+                              >
+                                {showApiKey ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9 hover:bg-muted transition-colors"
+                                onClick={handleCopyApiKey}
+                              >
+                                {copiedKey ? (
+                                  <CheckCircle className="h-4 w-4 text-success" />
+                                ) : (
+                                  <CopyIcon className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        onClick={handleSaveApiKey}
+                        disabled={!systemApiKey.trim() || isLoading || isLoadingKey}
+                        className="min-w-[120px] h-12 shadow-lg hover:shadow-primary/20 transition-all"
+                      >
+                        {isLoading ? (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          "Salvar"
+                        )}
+                      </Button>
+                    </div>
+
+                    {systemApiKey && !systemApiKey.startsWith('sk-ant-') && (
+                      <p className="text-sm text-destructive flex items-center gap-2 bg-destructive/10 p-3 rounded-lg">
+                        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                        A chave API deve começar com "sk-ant-"
+                      </p>
+                    )}
                   </div>
 
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Input
-                        type={showApiKey ? "text" : "password"}
-                        value={systemApiKey}
-                        onChange={(e) => setSystemApiKey(e.target.value)}
-                        placeholder={isLoadingKey ? "Carregando..." : "sk-ant-..."}
-                        className={cn(
-                          "font-mono pr-20",
-                          systemApiKey && !systemApiKey.startsWith('sk-ant-') && 'border-destructive'
-                        )}
-                        disabled={isLoading || isLoadingKey}
-                      />
-                      <div className="absolute right-0 top-0 h-full flex items-center gap-1 pr-2">
-                        {systemApiKey && (
-                          <>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hover:bg-transparent"
-                              onClick={() => setShowApiKey(!showApiKey)}
-                            >
-                              {showApiKey ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hover:bg-transparent"
-                              onClick={handleCopyApiKey}
-                            >
-                              {copiedKey ? (
-                                <CheckCircle className="h-4 w-4 text-success" />
-                              ) : (
-                                <CopyIcon className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                  <Card className="bg-muted border-dashed">
+                    <CardContent className="pt-6">
+                      <h4 className="text-lg font-medium mb-4">Dicas de Segurança</h4>
+                      <ul className="space-y-3 text-sm text-muted-foreground">
+                        <li className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted-foreground/5 transition-colors">
+                          <CheckCircle className="h-5 w-5 text-success flex-shrink-0" />
+                          <span>Nunca compartilhe sua chave API publicamente</span>
+                        </li>
+                        <li className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted-foreground/5 transition-colors">
+                          <CheckCircle className="h-5 w-5 text-success flex-shrink-0" />
+                          <span>Revogue imediatamente chaves comprometidas</span>
+                        </li>
+                        <li className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted-foreground/5 transition-colors">
+                          <CheckCircle className="h-5 w-5 text-success flex-shrink-0" />
+                          <span>Monitore regularmente o uso da API</span>
+                        </li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="rate-limits">
+              <Card className="border-none shadow-lg">
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <Shield className="h-6 w-6 text-primary" />
+                    Limites de Requisição
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    Configure os limites de requisição para diferentes tipos de operações
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <RateLimitSection 
+                      title="API Geral"
+                      description="Limites globais aplicados a todas as requisições da API"
+                      limits={rateLimits.api}
+                      path="api"
+                      maxMax={500}
+                    />
+
+                    <RateLimitSection 
+                      title="Chat"
+                      description="Limites específicos para as interações de chat com o Claude AI"
+                      limits={rateLimits.chat}
+                      path="chat"
+                      minMax={5}
+                      maxMax={100}
+                      step={5}
+                    />
+
+                    <RateLimitSection 
+                      title="Administração"
+                      description="Limites para operações administrativas e configurações do sistema"
+                      limits={rateLimits.admin}
+                      path="admin"
+                      minMax={5}
+                      maxMax={50}
+                      step={5}
+                    />
+
+                    <RateLimitSection 
+                      title="Upload"
+                      description="Limites para o upload de arquivos e documentos"
+                      limits={rateLimits.upload}
+                      path="upload"
+                      minMax={1}
+                      maxMax={20}
+                      step={1}
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-4">
                     <Button
-                      onClick={handleSaveApiKey}
-                      disabled={!systemApiKey.trim() || isLoading || isLoadingKey}
-                      className="min-w-[100px]"
+                      onClick={handleSaveRateLimits}
+                      disabled={isUpdatingLimits || isLoadingLimits}
+                      className="min-w-[200px] shadow-lg hover:shadow-primary/20 transition-all"
+                      size="lg"
                     >
-                      {isLoading ? (
+                      {isUpdatingLimits ? (
                         <>
-                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
                           Salvando...
                         </>
                       ) : (
-                        "Salvar"
+                        <>
+                          <Shield className="mr-2 h-5 w-5" />
+                          Salvar Configurações
+                        </>
                       )}
                     </Button>
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-                  {systemApiKey && !systemApiKey.startsWith('sk-ant-') && (
-                    <p className="text-sm text-destructive flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      A chave API deve começar com "sk-ant-"
+            <TabsContent value="logs">
+              <Card className="border-none shadow-lg">
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <FileText className="h-6 w-6 text-primary" />
+                    Logs do Sistema
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    Visualize os logs mais recentes do sistema em tempo real
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4" />
+                      Atualizado a cada 30 segundos
                     </p>
-                  )}
-                </div>
-
-                <Card className="bg-muted border-dashed">
-                  <CardContent className="pt-6">
-                    <h4 className="font-medium mb-2">Dicas de Segurança</h4>
-                    <ul className="space-y-2 text-sm text-muted-foreground">
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-success" />
-                        Nunca compartilhe sua chave API publicamente
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-success" />
-                        Revogue imediatamente chaves comprometidas
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-success" />
-                        Monitore regularmente o uso da API
-                      </li>
-                    </ul>
-                  </CardContent>
-                </Card>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="rate-limits">
-            <Card>
-              <CardHeader>
-                <CardTitle>Limites de Requisição</CardTitle>
-                <CardDescription>
-                  Configure os limites de requisição para diferentes tipos de operações
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-8">
-                <RateLimitSection 
-                  title="API Geral"
-                  description="Limites globais aplicados a todas as requisições da API"
-                  limits={rateLimits.api}
-                  path="api"
-                  maxMax={500}
-                />
-
-                <RateLimitSection 
-                  title="Chat"
-                  description="Limites específicos para as interações de chat com o Claude AI"
-                  limits={rateLimits.chat}
-                  path="chat"
-                  minMax={5}
-                  maxMax={100}
-                  step={5}
-                />
-
-                <RateLimitSection 
-                  title="Administração"
-                  description="Limites para operações administrativas e configurações do sistema"
-                  limits={rateLimits.admin}
-                  path="admin"
-                  minMax={5}
-                  maxMax={50}
-                  step={5}
-                />
-
-                <RateLimitSection 
-                  title="Upload"
-                  description="Limites para o upload de arquivos e documentos"
-                  limits={rateLimits.upload}
-                  path="upload"
-                  minMax={1}
-                  maxMax={20}
-                  step={1}
-                />
-
-                <div className="flex justify-end pt-4">
-                  <Button
-                    onClick={handleSaveRateLimits}
-                    disabled={isUpdatingLimits || isLoadingLimits}
-                    className="min-w-[200px]"
-                  >
-                    {isUpdatingLimits ? (
-                      <>
-                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                        Salvando...
-                      </>
-                    ) : (
-                      "Salvar Configurações"
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="logs">
-            <Card>
-              <CardHeader>
-                <CardTitle>Logs do Sistema</CardTitle>
-                <CardDescription>
-                  Visualize os logs mais recentes do sistema em tempo real
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-between items-center mb-4">
-                  <p className="text-sm text-muted-foreground">
-                    Últimos logs (atualizado a cada 30 segundos)
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/logs"] })}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Atualizar
-                  </Button>
-                </div>
-                <div className="h-[400px] overflow-auto font-mono text-sm whitespace-pre bg-muted p-4 rounded-lg">
-                  {isLoadingLogs ? (
-                    <p className="text-muted-foreground">Carregando logs...</p>
-                  ) : logsError ? (
-                    <p className="text-destructive">
-                      Erro ao carregar logs: {logsError instanceof Error ? logsError.message : 'Erro desconhecido'}
-                    </p>
-                  ) : !logs || logs.length === 0 ? (
-                    <p className="text-muted-foreground">Nenhum log encontrado</p>
-                  ) : (
-                    logs.map((log, index) => (
-                      <div key={index} className="mb-1">
-                        <span className="text-muted-foreground">
-                          {new Date(log.timestamp).toLocaleString()}
-                        </span>
-                        <span className={`ml-2 ${log.level === 'error' ? 'text-destructive' : ''}`}>
-                          {log.message}
-                        </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/logs"] })}
+                      className="shadow hover:shadow-md transition-all"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Atualizar Agora
+                    </Button>
+                  </div>
+                  <div className="h-[500px] overflow-auto font-mono text-sm whitespace-pre bg-muted/50 p-6 rounded-lg border shadow-inner">
+                    {isLoadingLogs ? (
+                      <div className="flex items-center justify-center h-full">
+                        <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
                       </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    ) : logsError ? (
+                      <div className="flex items-center gap-2 text-destructive bg-destructive/10 p-4 rounded-lg">
+                        <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+                        <p>
+                          Erro ao carregar logs: {logsError instanceof Error ? logsError.message : 'Erro desconhecido'}
+                        </p>
+                      </div>
+                    ) : !logs || logs.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                        <FileText className="h-8 w-8 mb-2" />
+                        <p>Nenhum log encontrado</p>
+                      </div>
+                    ) : (
+                      logs.map((log, index) => (
+                        <div 
+                          key={index} 
+                          className={cn(
+                            "mb-2 p-2 rounded transition-colors",
+                            log.level === 'error' ? 'bg-destructive/10 text-destructive' : 'hover:bg-muted-foreground/5'
+                          )}
+                        >
+                          <span className="text-muted-foreground inline-block min-w-[180px]">
+                            {new Date(log.timestamp).toLocaleString()}
+                          </span>
+                          <span className="ml-4">{log.message}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <TabsContent value="stats">
-            <Card>
-              <CardHeader>
-                <CardTitle>Estatísticas do Sistema</CardTitle>
-                <CardDescription>
-                  Métricas e informações sobre o uso da plataforma
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Total de Chatbots</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-3xl font-bold">0</p>
-                    </CardContent>
-                  </Card>
+            <TabsContent value="stats">
+              <Card className="border-none shadow-lg">
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <Activity className="h-6 w-6 text-primary" />
+                    Estatísticas do Sistema
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    Métricas e informações sobre o uso da plataforma
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Card className="border-none shadow transition-all hover:shadow-lg">
+                      <CardHeader>
+                        <CardTitle className="text-lg">Total de Chatbots</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                          0
+                        </p>
+                      </CardContent>
+                    </Card>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Mensagens Hoje</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-3xl font-bold">0</p>
-                    </CardContent>
-                  </Card>
+                    <Card className="border-none shadow transition-all hover:shadow-lg">
+                      <CardHeader>
+                        <CardTitle className="text-lg">Mensagens Hoje</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                          0
+                        </p>
+                      </CardContent>
+                    </Card>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Usuários Ativos</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-3xl font-bold">0</p>
-                    </CardContent>
-                  </Card>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    <Card className="border-none shadow transition-all hover:shadow-lg">
+                      <CardHeader>
+                        <CardTitle className="text-lg">Usuários Ativos</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                          0
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </div>
         </Tabs>
       </div>
     </div>
