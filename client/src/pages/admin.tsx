@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Key, Activity, FileText, Eye, EyeOff, Shield, RefreshCw, Info } from "lucide-react";
+import { ArrowLeft, Key, Activity, FileText, Eye, EyeOff, Shield, RefreshCw, Info, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { RateLimitConfig, DEFAULT_RATE_LIMITS } from "@shared/schema";
@@ -148,7 +148,8 @@ export default function AdminPage() {
     path, 
     minMax = 10,
     maxMax = 500,
-    step = 10 
+    step = 10,
+    warningThreshold = 0.8  // 80% of max value
   }: { 
     title: string, 
     description: string, 
@@ -156,69 +157,102 @@ export default function AdminPage() {
     path: 'api' | 'chat' | 'admin' | 'upload',
     minMax?: number,
     maxMax?: number,
-    step?: number
-  }) => (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <h3 className="font-medium">{title}</h3>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger>
-              <Info className="h-4 w-4 text-muted-foreground" />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="max-w-xs">{description}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-      <div className="space-y-6">
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm">Máximo de requisições</span>
-            <span className="text-sm font-mono">{limits.max}</span>
+    step?: number,
+    warningThreshold?: number
+  }) => {
+    const effectiveRate = (limits.max / (limits.windowMs / 1000)) * 60;
+    const isHighRate = limits.max >= maxMax * warningThreshold;
+    const isLowWindow = limits.windowMs <= 60000; // 60 seconds
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <h3 className="font-medium">{title}</h3>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <Info className="h-4 w-4 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="max-w-xs">{description}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {(isHighRate || isLowWindow) && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">
+                    {isHighRate && "Taxa de requisições alta pode sobrecarregar o sistema."}
+                    {isLowWindow && "Intervalo curto pode causar sobrecarga."}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+        <div className="space-y-6">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm">Máximo de requisições</span>
+              <span className="text-sm font-mono">{limits.max}</span>
+            </div>
+            <div className="space-y-2">
+              <Slider
+                value={[limits.max]}
+                onValueChange={([value]) => setRateLimits(prev => ({
+                  ...prev,
+                  [path]: { ...prev[path], max: value }
+                }))}
+                min={minMax}
+                max={maxMax}
+                step={step}
+                disabled={isUpdatingLimits || isLoadingLimits}
+              />
+              <Progress 
+                value={(limits.max / maxMax) * 100} 
+                className={`h-1 ${isHighRate ? 'bg-warning' : ''}`}
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Slider
-              value={[limits.max]}
-              onValueChange={([value]) => setRateLimits(prev => ({
-                ...prev,
-                [path]: { ...prev[path], max: value }
-              }))}
-              min={minMax}
-              max={maxMax}
-              step={step}
-              disabled={isUpdatingLimits || isLoadingLimits}
-            />
-            <Progress value={(limits.max / maxMax) * 100} className="h-1" />
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm">Intervalo de tempo</span>
+              <span className="text-sm font-mono">{limits.windowMs / 1000}s</span>
+            </div>
+            <div className="space-y-2">
+              <Slider
+                value={[limits.windowMs / 1000]}
+                onValueChange={([value]) => setRateLimits(prev => ({
+                  ...prev,
+                  [path]: { ...prev[path], windowMs: value * 1000 }
+                }))}
+                min={30}
+                max={300}
+                step={30}
+                disabled={isUpdatingLimits || isLoadingLimits}
+              />
+              <Progress 
+                value={(limits.windowMs / (300 * 1000)) * 100} 
+                className={`h-1 ${isLowWindow ? 'bg-warning' : ''}`}
+              />
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-xs text-muted-foreground">
+                Taxa efetiva:
+              </p>
+              <p className={`text-xs font-mono ${effectiveRate > 100 ? 'text-warning' : ''}`}>
+                {effectiveRate.toFixed(1)} req/min
+              </p>
+            </div>
           </div>
         </div>
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm">Intervalo de tempo</span>
-            <span className="text-sm font-mono">{limits.windowMs / 1000}s</span>
-          </div>
-          <div className="space-y-2">
-            <Slider
-              value={[limits.windowMs / 1000]}
-              onValueChange={([value]) => setRateLimits(prev => ({
-                ...prev,
-                [path]: { ...prev[path], windowMs: value * 1000 }
-              }))}
-              min={30}
-              max={300}
-              step={30}
-              disabled={isUpdatingLimits || isLoadingLimits}
-            />
-            <Progress value={(limits.windowMs / (300 * 1000)) * 100} className="h-1" />
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Taxa efetiva: {((limits.max / (limits.windowMs / 1000)) * 60).toFixed(1)} req/min
-          </p>
-        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const { 
     data: logs = [], 
