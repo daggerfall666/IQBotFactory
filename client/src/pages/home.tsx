@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus } from "lucide-react";
+import { Plus, Settings2, Database } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Chatbot } from "@shared/schema";
@@ -61,38 +61,96 @@ export default function Home() {
   });
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Carregando...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold">Seus Chatbots</h1>
-        <Button onClick={() => createBot.mutate()} disabled={createBot.isPending}>
-          <Plus className="mr-2 h-4 w-4" />
-          Criar Novo Bot
-        </Button>
-      </div>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto py-12">
+        <div className="flex flex-col gap-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                Seus Chatbots
+              </h1>
+              <p className="text-muted-foreground mt-2">
+                Gerencie e configure seus assistentes virtuais
+              </p>
+            </div>
+            <Button 
+              onClick={() => createBot.mutate()} 
+              disabled={createBot.isPending}
+              size="lg"
+              className="shadow-lg hover:shadow-primary/20 transition-all"
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              Criar Novo Bot
+            </Button>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {chatbots?.map((bot) => (
-          <Card key={bot.id}>
-            <CardHeader>
-              <CardTitle>{bot.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">{bot.description || "Sem descrição"}</p>
-              <div className="flex gap-2">
-                <Link href={`/bot/${bot.id}`}>
-                  <Button variant="secondary">Configurar</Button>
-                </Link>
-                <Link href={`/bot/${bot.id}/knowledge`}>
-                  <Button variant="outline">Base de Conhecimento</Button>
-                </Link>
+          {chatbots?.length === 0 ? (
+            <Card className="p-12 border-dashed">
+              <div className="text-center">
+                <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <Plus className="h-6 w-6 text-primary" />
+                </div>
+                <h2 className="text-lg font-semibold mb-2">Nenhum chatbot criado</h2>
+                <p className="text-muted-foreground mb-4">
+                  Comece criando seu primeiro chatbot para interagir com seus visitantes
+                </p>
+                <Button onClick={() => createBot.mutate()} disabled={createBot.isPending}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Criar Primeiro Bot
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {chatbots?.map((bot) => (
+                <Card key={bot.id} className="hover:shadow-lg transition-all">
+                  <CardHeader>
+                    <CardTitle>{bot.name}</CardTitle>
+                    <CardDescription>{bot.description || "Sem descrição"}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Settings2 className="h-4 w-4" />
+                          Modelo: {bot.settings.model.split("-").pop()}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Database className="h-4 w-4" />
+                          {bot.apiKey ? "Chave API personalizada" : "Chave API padrão"}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Link href={`/bot/${bot.id}`} className="flex-1">
+                          <Button variant="secondary" className="w-full">
+                            Configurar
+                          </Button>
+                        </Link>
+                        <Link href={`/bot/${bot.id}/knowledge`} className="flex-1">
+                          <Button variant="outline" className="w-full">
+                            Base de Conhecimento
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
