@@ -264,6 +264,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Fetching analytics for bot:", botId);
 
       try {
+        // Log the SQL query being executed
+        console.log("Executing query for chat_interactions");
+
         const interactions = await db
           .select()
           .from(chatInteractions)
@@ -271,9 +274,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         console.log("Raw interactions data:", interactions);
 
+        // Return empty statistics if no interactions found
+        if (!interactions || interactions.length === 0) {
+          console.log("No interactions found for bot:", botId);
+          return res.json({
+            totalInteractions: 0,
+            successfulInteractions: 0,
+            averageResponseTime: 0,
+            totalTokensUsed: 0,
+            usageByDay: []
+          });
+        }
+
         // Garantir que temos valores padrão e dados válidos
-        const totalInteractions = interactions?.length || 0;
-        const successfulInteractions = interactions?.filter(i => i?.success === true)?.length || 0;
+        const totalInteractions = interactions.length;
+        const successfulInteractions = interactions.filter(i => i?.success === true).length;
 
         let averageResponseTime = 0;
         if (totalInteractions > 0) {
@@ -284,13 +299,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           averageResponseTime = Math.round(totalTime / totalInteractions);
         }
 
-        const totalTokensUsed = interactions?.reduce((acc, i) => {
+        const totalTokensUsed = interactions.reduce((acc, i) => {
           const tokens = typeof i.tokensUsed === 'number' ? i.tokensUsed : 0;
           return acc + tokens;
-        }, 0) || 0;
+        }, 0);
 
         // Agrupar interações por dia com validação de data
-        const usageByDay = interactions?.reduce((acc, i) => {
+        const usageByDay = interactions.reduce((acc, i) => {
           try {
             const timestamp = i?.timestamp ? new Date(i.timestamp) : null;
             if (timestamp && !isNaN(timestamp.getTime())) {
@@ -301,7 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error("Error processing interaction date:", err);
           }
           return acc;
-        }, {} as Record<string, number>) || {};
+        }, {} as Record<string, number>);
 
         const response = {
           totalInteractions,
