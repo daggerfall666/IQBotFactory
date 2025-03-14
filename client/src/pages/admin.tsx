@@ -12,21 +12,27 @@ export default function AdminPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [systemApiKey, setSystemApiKey] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   async function handleSaveApiKey() {
+    if (!systemApiKey.trim()) return;
+
+    setIsLoading(true);
     try {
       await apiRequest("POST", "/api/admin/system-key", { key: systemApiKey });
       toast({
         title: "Sucesso",
-        description: "Chave API do sistema atualizada"
+        description: "Chave API do sistema atualizada com sucesso"
       });
-      setSystemApiKey("");
-    } catch (error) {
+      setSystemApiKey(""); // Limpa o input após sucesso
+    } catch (error: any) {
       toast({
         title: "Erro",
-        description: "Não foi possível salvar a chave API",
+        description: error.details || "Não foi possível salvar a chave API",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -77,8 +83,14 @@ export default function AdminPage() {
                     onChange={(e) => setSystemApiKey(e.target.value)}
                     placeholder="sk-ant-..."
                     className="font-mono"
+                    disabled={isLoading}
                   />
-                  <Button onClick={handleSaveApiKey}>Salvar</Button>
+                  <Button 
+                    onClick={handleSaveApiKey} 
+                    disabled={!systemApiKey.trim() || isLoading}
+                  >
+                    {isLoading ? "Salvando..." : "Salvar"}
+                  </Button>
                 </div>
               </div>
             </CardContent>

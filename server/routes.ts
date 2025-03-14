@@ -8,7 +8,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import { db, chatInteractions } from './db'; // Added import for db and table
 import { eq } from 'drizzle-orm'; // Added import for eq
 
-
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
