@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Key, Activity, FileText } from "lucide-react";
+import { ArrowLeft, Key, Activity, FileText, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function AdminPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [systemApiKey, setSystemApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSaveApiKey() {
@@ -24,13 +25,14 @@ export default function AdminPage() {
         title: "Sucesso",
         description: "Chave API do sistema atualizada com sucesso"
       });
-      setSystemApiKey(""); // Limpa o input após sucesso
+      // Não limpa o input após sucesso para permitir visualização
     } catch (error: any) {
       toast({
         title: "Erro",
         description: error.details || "Não foi possível salvar a chave API",
         variant: "destructive"
       });
+      setSystemApiKey(""); // Limpa apenas em caso de erro
     } finally {
       setIsLoading(false);
     }
@@ -77,14 +79,31 @@ export default function AdminPage() {
                   Esta é a chave API padrão usada quando um bot não tem sua própria chave configurada.
                 </p>
                 <div className="flex gap-2">
-                  <Input
-                    type="password"
-                    value={systemApiKey}
-                    onChange={(e) => setSystemApiKey(e.target.value)}
-                    placeholder="sk-ant-..."
-                    className="font-mono"
-                    disabled={isLoading}
-                  />
+                  <div className="flex-1 relative">
+                    <Input
+                      type={showApiKey ? "text" : "password"}
+                      value={systemApiKey}
+                      onChange={(e) => setSystemApiKey(e.target.value)}
+                      placeholder="sk-ant-..."
+                      className="font-mono pr-10"
+                      disabled={isLoading}
+                    />
+                    {systemApiKey && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        onClick={() => setShowApiKey(!showApiKey)}
+                      >
+                        {showApiKey ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                   <Button 
                     onClick={handleSaveApiKey} 
                     disabled={!systemApiKey.trim() || isLoading}
