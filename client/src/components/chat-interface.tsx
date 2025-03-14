@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +24,7 @@ export function ChatInterface({ botId, className }: ChatInterfaceProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Fetch bot settings to get initial message
   const { data: bot } = useQuery<Chatbot>({
@@ -36,6 +37,13 @@ export function ChatInterface({ botId, className }: ChatInterfaceProps) {
       setMessages([{ role: "assistant", content: bot.settings.initialMessage }]);
     }
   }, [bot]);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   async function handleSend() {
     if (!input.trim() || isLoading) return;
@@ -70,7 +78,7 @@ export function ChatInterface({ botId, className }: ChatInterfaceProps) {
   return (
     <Card className={className}>
       <CardContent className="p-4 flex flex-col h-[500px]">
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
           <div className="space-y-4">
             {messages.map((message, i) => (
               <div

@@ -8,7 +8,8 @@ export async function sendMessage(botId: number, message: string): Promise<strin
   });
 
   if (!response.ok) {
-    throw new Error("Failed to send message");
+    const error = await response.json();
+    throw new Error(error.details || error.error || "Failed to send message");
   }
 
   const data = await response.json();
