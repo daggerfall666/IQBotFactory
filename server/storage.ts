@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { Chatbot, InsertChatbot, KnowledgeBase, InsertKnowledgeBase, chatbots, knowledgeBase } from "@shared/schema";
+import { Chatbot, InsertChatbot, KnowledgeBase, InsertKnowledgeBase, chatbots, knowledgeBase, systemSettings } from "@shared/schema";
 import { eq } from 'drizzle-orm';
 
 const connectionString = process.env.DATABASE_URL!;
@@ -18,6 +18,10 @@ export interface IStorage {
   getKnowledgeBase(id: number): Promise<KnowledgeBase | undefined>;
   listKnowledgeBase(botId: number): Promise<KnowledgeBase[]>;
   deleteKnowledgeBase(id: number): Promise<boolean>;
+
+  // Novas funções para gerenciar configurações do sistema
+  getSystemSetting(key: string): Promise<string | null>;
+  setSystemSetting(key: string, value: string): Promise<void>;
 }
 
 export class PostgresStorage implements IStorage {
@@ -84,6 +88,24 @@ export class PostgresStorage implements IStorage {
       .where(eq(knowledgeBase.id, id))
       .returning();
     return !!deleted;
+  }
+
+  async getSystemSetting(key: string): Promise<string | null> {
+    const [setting] = await db
+      .select()
+      .from(systemSettings)
+      .where(eq(systemSettings.key, key));
+    return setting?.value ?? null;
+  }
+
+  async setSystemSetting(key: string, value: string): Promise<void> {
+    await db
+      .insert(systemSettings)
+      .values({ key, value })
+      .onConflictDoUpdate({
+        target: systemSettings.key,
+        set: { value, updatedAt: new Date() }
+      });
   }
 }
 

@@ -38,14 +38,16 @@ async function validateAnthropicKey(apiKey: string): Promise<boolean> {
 }
 
 async function getAnthropicClient(apiKey?: string | null) {
-  // Se apiKey for undefined ou null, usa a chave do sistema
-  const key = apiKey ?? process.env.ANTHROPIC_API_KEY;
-
-  if (!key) {
-    throw new Error("No API key available");
-  }
-
   try {
+    // Se apiKey for undefined ou null, usa a chave do sistema
+    let key = apiKey;
+    if (!key) {
+      key = await storage.getSystemSetting('ANTHROPIC_API_KEY');
+      if (!key) {
+        throw new Error("No API key available");
+      }
+    }
+
     const anthropic = new Anthropic({
       apiKey: key
     });
@@ -299,12 +301,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // Atualiza a variável de ambiente
-      process.env.ANTHROPIC_API_KEY = key;
+      // Salva a chave no banco de dados
+      await storage.setSystemSetting('ANTHROPIC_API_KEY', key);
       console.log("System API key updated successfully");
-
-      // Não precisa atualizar os bots pois eles já estão com apiKey: null
-      // e continuarão usando a chave do sistema
 
       res.json({ success: true });
     } catch (err) {

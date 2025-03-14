@@ -2,6 +2,14 @@ import { pgTable, text, serial, integer, jsonb, timestamp, boolean } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Adicionar nova tabela para configurações do sistema
+export const systemSettings = pgTable("system_settings", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const chatbots = pgTable("chatbots", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -96,3 +104,10 @@ export const CLAUDE_MODELS = [
     maxTokens: 2048
   }
 ] as const;
+
+export type SystemSetting = typeof systemSettings.$inferSelect;
+
+export const insertSystemSettingSchema = createInsertSchema(systemSettings).omit({ 
+  id: true,
+  updatedAt: true
+});
