@@ -62,12 +62,12 @@ export function KnowledgeBaseUploader({ botId, onUploadComplete }: KnowledgeBase
         accept=".txt,.pdf,.doc,.docx"
       />
 
-      <div className="flex flex-col items-center gap-4">
-        <Upload className="h-12 w-12 text-muted-foreground" />
-        <div>
-          <h3 className="text-lg font-semibold">Upload Knowledge Base</h3>
-          <p className="text-sm text-muted-foreground">
-            Drag and drop or click to upload documents
+      <div className="flex flex-col items-center gap-6 p-8 bg-gradient-to-b from-background to-muted/20 rounded-xl border-2 border-dashed border-muted transition-all hover:border-primary/50">
+        <Upload className="h-16 w-16 text-primary/60" />
+        <div className="text-center">
+          <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">Upload Knowledge Base</h3>
+          <p className="text-sm text-muted-foreground mt-2 max-w-sm">
+            Drag and drop your documents here or click to browse files
           </p>
         </div>
 
