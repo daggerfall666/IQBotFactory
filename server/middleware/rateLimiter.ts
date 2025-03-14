@@ -22,6 +22,15 @@ const createLimiter = (options: {
       message: options.message,
       retryAfter: Math.ceil(options.windowMs / 1000)
     });
+  },
+  // Add rate limit info to response headers
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  // Skip rate limiting for certain paths
+  skip: (req) => {
+    // Add paths that should skip rate limiting
+    const skipPaths = ['/health', '/metrics'];
+    return skipPaths.includes(req.path);
   }
 });
 
@@ -44,4 +53,11 @@ export const adminLimiter = createLimiter({
   windowMs: 60 * 1000, // 1 minute
   max: 20,
   message: 'Too many admin requests from this IP, please try again after a minute'
+});
+
+// Knowledge base upload limiter: 10 requests per minute
+export const uploadLimiter = createLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  message: 'Too many upload requests from this IP, please try again after a minute'
 });

@@ -7,7 +7,7 @@ import multer from "multer";
 import Anthropic from "@anthropic-ai/sdk";
 import { db, chatInteractions } from './db';
 import { eq } from 'drizzle-orm';
-import { apiLimiter, chatLimiter, adminLimiter } from './middleware/rateLimiter';
+import { apiLimiter, chatLimiter, adminLimiter, uploadLimiter } from './middleware/rateLimiter';
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -404,7 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Prompt generation endpoint
+  // Prompt generation endpoint with API limiter
   app.post("/api/generate-prompt", apiLimiter, async (req, res) => {
     try {
       const { mission } = req.body;
@@ -518,6 +518,26 @@ Return only the improved prompt without any explanations or metadata.`
         error: "Failed to improve prompt",
         details: err instanceof Error ? err.message : "Unknown error"
       });
+    }
+  });
+
+  // Knowledge base endpoints with upload limiter
+  app.post("/api/knowledge-base", uploadLimiter, upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const { originalname, buffer } = req.file;
+      const botId = parseInt(req.body.botId);
+      if (isNaN(botId)) {
+        return res.status(400).json({ error: 'Invalid bot ID' });
+      }
+      const knowledgeBaseEntry = await storage.createKnowledgeBaseEntry(botId, originalname, buffer);
+      res.json(knowledgeBaseEntry);
+    } catch(e){
+      console.error('Error creating knowledge base entry', e);
+      res.status(500).json({ error: 'Failed to create knowledge base entry' });
     }
   });
 
