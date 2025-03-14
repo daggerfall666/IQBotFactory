@@ -228,45 +228,45 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="stats">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('admin.stats.title')}</CardTitle>
-              <CardDescription>
-                {t('admin.stats.description')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{t('admin.stats.total_bots')}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold">0</p>
-                  </CardContent>
-                </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Estatísticas do Sistema</CardTitle>
+                <CardDescription>
+                  Métricas e informações sobre o uso da plataforma
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Total de Chatbots</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-3xl font-bold">0</p>
+                    </CardContent>
+                  </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{t('admin.stats.messages_today')}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold">0</p>
-                  </CardContent>
-                </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Mensagens Hoje</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-3xl font-bold">0</p>
+                    </CardContent>
+                  </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{t('admin.stats.active_users')}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold">0</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Usuários Ativos</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-3xl font-bold">0</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
         <TabsContent value="rate-limits">
           <Card>
