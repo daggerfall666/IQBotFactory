@@ -618,8 +618,17 @@ Return only the improved prompt without any explanations or metadata.`
           `.as('level'),
           message: sql`
             CASE
-              WHEN error_message IS NOT NULL THEN error_message
-              ELSE CONCAT('Chat interaction: ', user_message)
+              WHEN error_message IS NOT NULL THEN 
+                CONCAT('Erro na interação: ', error_message)
+              ELSE 
+                CONCAT(
+                  'Bot ID: ', bot_id::text,
+                  ' | Modelo: ', model,
+                  ' | Tokens: ', tokens_used::text,
+                  ' | Tempo: ', response_time::text, 'ms',
+                  ' | Mensagem: ', SUBSTRING(user_message, 1, 100),
+                  ' | Resposta: ', SUBSTRING(bot_response, 1, 100)
+                )
             END
           `.as('message'),
           timestamp: chatInteractions.timestamp
