@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/layout";
 import { Activity, Server, Clock, AlertTriangle, CheckCircle, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HealthDashboardSkeleton } from "@/components/skeletons/health-dashboard-skeleton";
 
 interface SystemHealth {
   system: {
@@ -55,11 +56,7 @@ export default function HealthDashboard() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="container py-8">
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <Activity className="h-16 w-16 animate-bounce text-primary/60" />
-          </div>
-        </div>
+        <HealthDashboardSkeleton />
       </Layout>
     );
   }
