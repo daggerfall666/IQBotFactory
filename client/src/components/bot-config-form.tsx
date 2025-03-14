@@ -30,10 +30,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Chatbot } from "@shared/schema";
-import { Settings2, MessageSquare, Brush, Code } from "lucide-react";
-import {PromptGenerator} from "@/components/prompt-generator"; // Assuming this component exists
+import { Settings2, MessageSquare, Brush, Code, Wand2, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface BotConfigFormProps {
   bot: Chatbot;
@@ -42,10 +52,87 @@ interface BotConfigFormProps {
 }
 
 export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isImproving, setIsImproving] = useState(false);
+  const [showMissionInput, setShowMissionInput] = useState(false);
+  const [mission, setMission] = useState("");
+  const { toast } = useToast();
+
   const form = useForm({
     resolver: zodResolver(insertChatbotSchema),
     defaultValues: bot
   });
+
+  async function handleGeneratePrompt() {
+    if (!mission.trim()) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Por favor, descreva a missão do chatbot",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const response = await apiRequest("POST", "/api/generate-prompt", { mission });
+      const data = await response.json();
+
+      if (data.prompt) {
+        form.setValue("settings.systemPrompt", data.prompt);
+        toast({
+          title: "Prompt gerado",
+          description: "O prompt foi gerado com sucesso"
+        });
+        setShowMissionInput(false);
+        setMission("");
+      }
+    } catch (error) {
+      console.error("Error generating prompt:", error);
+      toast({
+        title: "Erro ao gerar prompt",
+        description: "Não foi possível gerar o prompt",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  async function handleImprovePrompt() {
+    const currentPrompt = form.getValues("settings.systemPrompt");
+    if (!currentPrompt?.trim()) {
+      toast({
+        title: "Campo obrigatório",
+        description: "É necessário ter um prompt para melhorar",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsImproving(true);
+    try {
+      const response = await apiRequest("POST", "/api/improve-prompt", { currentPrompt });
+      const data = await response.json();
+
+      if (data.prompt) {
+        form.setValue("settings.systemPrompt", data.prompt);
+        toast({
+          title: "Prompt melhorado",
+          description: "O prompt foi aprimorado com sucesso"
+        });
+      }
+    } catch (error) {
+      console.error("Error improving prompt:", error);
+      toast({
+        title: "Erro ao melhorar prompt",
+        description: "Não foi possível melhorar o prompt",
+        variant: "destructive"
+      });
+    } finally {
+      setIsImproving(false);
+    }
+  }
 
   return (
     <Form {...form}>
@@ -193,16 +280,73 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                     <FormItem>
                       <FormLabel>Prompt do Sistema</FormLabel>
                       <FormControl>
-                        <div className="space-y-4">
+                        <div className="relative">
                           <Textarea 
                             {...field} 
-                            className="min-h-[100px]"
+                            className="min-h-[100px] pr-20"
                             placeholder="Você é um assistente útil que..."
                           />
-                          <PromptGenerator 
-                            onPromptGenerated={(prompt) => field.onChange(prompt)}
-                            currentPrompt={field.value}
-                          />
+                          <div className="absolute right-2 top-2 flex gap-1">
+                            <Dialog open={showMissionInput} onOpenChange={setShowMissionInput}>
+                              <DialogTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  type="button"
+                                  title="Gerar novo prompt"
+                                >
+                                  <Wand2 className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Gerar Prompt</DialogTitle>
+                                  <DialogDescription>
+                                    Descreva a missão do seu chatbot e deixe a IA criar um prompt otimizado.
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4 py-4">
+                                  <Textarea
+                                    placeholder="Ex: Um assistente de vendas especializado em produtos de tecnologia..."
+                                    value={mission}
+                                    onChange={(e) => setMission(e.target.value)}
+                                    className="min-h-[100px]"
+                                  />
+                                  <Button 
+                                    onClick={handleGeneratePrompt}
+                                    disabled={isGenerating || !mission.trim()}
+                                    className="w-full"
+                                  >
+                                    {isGenerating ? (
+                                      <>
+                                        <Wand2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Gerando prompt...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Wand2 className="h-4 w-4 mr-2" />
+                                        Gerar Prompt
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              type="button"
+                              onClick={handleImprovePrompt}
+                              disabled={isImproving || !field.value?.trim()}
+                              title="Melhorar prompt atual"
+                            >
+                              {isImproving ? (
+                                <Sparkles className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Sparkles className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
                         </div>
                       </FormControl>
                       <FormDescription>
@@ -255,7 +399,6 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
               </CardContent>
             </Card>
           </TabsContent>
-
           <TabsContent value="appearance" className="space-y-6 mt-6">
             <Card>
               <CardHeader>
