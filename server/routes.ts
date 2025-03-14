@@ -231,46 +231,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const botId = parseInt(req.params.botId);
       if (isNaN(botId)) {
+        console.error("Invalid bot ID:", req.params.botId);
         res.status(400).json({ error: "Invalid bot ID" });
         return;
       }
 
       const bot = await storage.getChatbot(botId);
       if (!bot) {
+        console.error("Chatbot not found:", botId);
         res.status(404).json({ error: "Chatbot not found" });
         return;
       }
+
+      console.log("Fetching analytics for bot:", botId);
 
       const interactions = await db
         .select()
         .from(chatInteractions)
         .where(eq(chatInteractions.botId, botId));
 
+      console.log("Found interactions:", interactions.length);
+
+      // Garantir que temos valores padrão caso não haja interações
       const totalInteractions = interactions.length;
       const successfulInteractions = interactions.filter(i => i.success).length;
-      const averageResponseTime = interactions.reduce((acc, i) => acc + i.responseTime, 0) / (totalInteractions || 1); 
+      const averageResponseTime = totalInteractions > 0 
+        ? Math.round(interactions.reduce((acc, i) => acc + i.responseTime, 0) / totalInteractions)
+        : 0;
       const totalTokensUsed = interactions.reduce((acc, i) => acc + i.tokensUsed, 0);
 
+      // Agrupar interações por dia
       const usageByDay = interactions.reduce((acc, i) => {
         const date = new Date(i.timestamp).toISOString().split('T')[0];
-        if (!acc[date]) acc[date] = 0;
-        acc[date]++;
+        acc[date] = (acc[date] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
-      res.json({
+      const response = {
         totalInteractions,
         successfulInteractions,
         averageResponseTime,
         totalTokensUsed,
-        usageByDay: Object.entries(usageByDay).map(([date, count]) => ({
-          date,
-          interactions: count
-        }))
-      });
+        usageByDay: Object.entries(usageByDay)
+          .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+          .map(([date, count]) => ({
+            date,
+            interactions: count
+          }))
+      };
+
+      console.log("Analytics response:", response);
+      res.json(response);
     } catch (err) {
       console.error("Analytics error:", err);
-      res.status(500).json({ error: "Failed to fetch analytics" });
+      res.status(500).json({ 
+        error: "Failed to fetch analytics",
+        details: err instanceof Error ? err.message : "Unknown error"
+      });
     }
   });
 
