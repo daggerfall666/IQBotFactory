@@ -30,39 +30,63 @@ export class MemStorage implements IStorage {
 
   async createChatbot(bot: InsertChatbot): Promise<Chatbot> {
     const id = this.chatbotId++;
-    const chatbot: Chatbot = { id, ...bot };
+    const chatbot: Chatbot = { 
+      id, 
+      name: bot.name,
+      description: bot.description || "",
+      settings: bot.settings,
+      wordpressConfig: bot.wordpressConfig,
+      apiKey: bot.apiKey
+    };
     this.chatbots.set(id, chatbot);
-    console.log("Created chatbot:", chatbot); // Debug log
+    console.log("Created chatbot:", chatbot);
     return chatbot;
   }
 
   async getChatbot(id: number): Promise<Chatbot | undefined> {
-    return this.chatbots.get(id);
+    const bot = this.chatbots.get(id);
+    console.log("Getting chatbot:", id, bot);
+    return bot;
   }
 
   async listChatbots(): Promise<Chatbot[]> {
-    console.log("Current chatbots:", Array.from(this.chatbots.values())); // Debug log
-    return Array.from(this.chatbots.values());
+    const bots = Array.from(this.chatbots.values());
+    console.log("Listing chatbots:", bots);
+    return bots;
   }
 
   async updateChatbot(id: number, bot: Partial<InsertChatbot>): Promise<Chatbot | undefined> {
     const existing = this.chatbots.get(id);
     if (!existing) return undefined;
 
-    const updated = { ...existing, ...bot };
+    const updated: Chatbot = {
+      ...existing,
+      name: bot.name || existing.name,
+      description: bot.description || existing.description,
+      settings: bot.settings || existing.settings,
+      wordpressConfig: bot.wordpressConfig || existing.wordpressConfig,
+      apiKey: bot.apiKey !== undefined ? bot.apiKey : existing.apiKey
+    };
+
     this.chatbots.set(id, updated);
+    console.log("Updated chatbot:", updated);
     return updated;
   }
 
   async deleteChatbot(id: number): Promise<boolean> {
-    return this.chatbots.delete(id);
+    const deleted = this.chatbots.delete(id);
+    console.log("Deleted chatbot:", id, deleted);
+    return deleted;
   }
 
   async addKnowledgeBase(kb: InsertKnowledgeBase): Promise<KnowledgeBase> {
     const id = this.kbId++;
-    const entry: KnowledgeBase = { 
-      ...kb, 
+    const entry: KnowledgeBase = {
       id,
+      botId: kb.botId,
+      type: kb.type,
+      content: kb.content,
+      sourceUrl: kb.sourceUrl || null,
       uploadedAt: new Date()
     };
     this.knowledgeBase.set(id, entry);
