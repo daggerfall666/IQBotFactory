@@ -140,13 +140,12 @@ export default function AdminPage() {
     data: logs = [], 
     isLoading: isLoadingLogs,
     error: logsError
-  } = useQuery({
+  } = useQuery<LogEntry[]>({
     queryKey: ["/api/admin/logs"],
     refetchInterval: 30000, 
     staleTime: 10000,
     retry: 3
   });
-
 
   return (
     <div className="container mx-auto py-8">
@@ -256,13 +255,17 @@ export default function AdminPage() {
                 {isLoadingLogs ? (
                   <p className="text-muted-foreground">Carregando logs...</p>
                 ) : logsError ? (
-                  <p className="text-destructive">Erro ao carregar logs: {logsError}</p>
-                ) : logs.length === 0 ? (
+                  <p className="text-destructive">
+                    Erro ao carregar logs: {logsError instanceof Error ? logsError.message : 'Erro desconhecido'}
+                  </p>
+                ) : !logs || logs.length === 0 ? (
                   <p className="text-muted-foreground">Nenhum log encontrado</p>
                 ) : (
                   logs.map((log, index) => (
                     <div key={index} className="mb-1">
-                      <span className="text-muted-foreground">{new Date(log.timestamp).toLocaleString()}</span>
+                      <span className="text-muted-foreground">
+                        {new Date(log.timestamp).toLocaleString()}
+                      </span>
                       <span className={`ml-2 ${log.level === 'error' ? 'text-destructive' : ''}`}>
                         {log.message}
                       </span>
