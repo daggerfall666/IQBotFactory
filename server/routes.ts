@@ -12,19 +12,22 @@ const upload = multer({
 });
 
 async function getAnthropicClient(apiKey?: string | null) {
-  if (!apiKey && !process.env.ANTHROPIC_API_KEY) {
-    throw new Error("No API key provided");
-  }
+  // Se apiKey for null, usa a chave do sistema
+  const key = apiKey === null ? process.env.ANTHROPIC_API_KEY : apiKey;
 
-  // Se apiKey for null ou undefined, usa a chave do sistema
-  const key = apiKey || process.env.ANTHROPIC_API_KEY;
   if (!key) {
-    throw new Error("API key is required");
+    throw new Error("No API key available");
   }
 
-  return new Anthropic({
-    apiKey: key
-  });
+  try {
+    const anthropic = new Anthropic({
+      apiKey: key
+    });
+    return anthropic;
+  } catch (err) {
+    console.error("Error creating Anthropic client:", err);
+    throw new Error("Failed to initialize AI client");
+  }
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -145,18 +148,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (err instanceof Anthropic.APIError) {
           res.status(err.status || 500).json({
             error: "AI Service Error",
-            details: err.message
+            details: "Chave API inválida ou inexistente. Por favor, verifique a configuração."
           });
         } else {
           res.status(500).json({ 
-            error: "Failed to process chat message",
-            details: err instanceof Error ? err.message : undefined
+            error: "Erro ao processar mensagem",
+            details: err instanceof Error ? err.message : "Erro desconhecido"
           });
         }
       }
     } catch (err) {
       console.error("Chat error:", err);
-      res.status(500).json({ error: "Failed to process chat message" });
+      res.status(500).json({ 
+        error: "Erro ao processar mensagem",
+        details: err instanceof Error ? err.message : "Erro desconhecido"
+      });
     }
   });
 

@@ -57,11 +57,11 @@ export function ChatInterface({ botId, className }: ChatInterfaceProps) {
       const response = await sendMessage(botId, input);
       setMessages(prev => [...prev, { role: "assistant", content: response }]);
     } catch (error: any) {
-      let errorMessage = "Erro ao enviar mensagem";
+      let errorMessage = error.message;
 
-      if (error.message.includes("invalid x-api-key")) {
+      if (error.message.includes("Chave API inválida")) {
         errorMessage = "Chave API inválida. Por favor, verifique a configuração do bot.";
-      } else if (error.message.includes("No API key provided")) {
+      } else if (error.message.includes("No API key")) {
         errorMessage = "Chave API não configurada. Por favor, configure uma chave API nas configurações do bot.";
       }
 
