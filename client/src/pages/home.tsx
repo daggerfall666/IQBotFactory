@@ -26,29 +26,26 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default function Home() {
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newBotName, setNewBotName] = useState("");
 
-  // Log status da query para debug
-  const { data: chatbots, isLoading, error } = useQuery<Chatbot[]>({
+  const { data: chatbots = [], isLoading, error } = useQuery<Chatbot[]>({
     queryKey: ["/api/chatbots"],
-    refetchInterval: 5000,
-    onSuccess: (data) => {
-      console.log("Query success:", data);
-    },
+    staleTime: 1000 * 30, // 30 segundos
+    retry: 3,
     onError: (err) => {
-      console.error("Query error:", err);
+      console.error("Error fetching chatbots:", err);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os chatbots",
+        variant: "destructive"
+      });
     }
   });
-
-  // Log quando o componente renderiza
-  useEffect(() => {
-    console.log("Home component state:", { isLoading, error, chatbotsLength: chatbots?.length });
-  }, [isLoading, error, chatbots]);
 
   const createBot = useMutation({
     mutationFn: async (name: string) => {
@@ -120,9 +117,7 @@ export default function Home() {
     }
   });
 
-  // Se tiver um erro, mostra mensagem
   if (error) {
-    console.error("Render error:", error);
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -139,9 +134,7 @@ export default function Home() {
     );
   }
 
-  // Se estiver carregando, mostra loading
   if (isLoading) {
-    console.log("Rendering loading state");
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -150,9 +143,6 @@ export default function Home() {
       </div>
     );
   }
-
-  // Log antes de renderizar o conteúdo principal
-  console.log("Rendering main content, chatbots:", chatbots);
 
   return (
     <div className="min-h-screen bg-background">
@@ -185,7 +175,7 @@ export default function Home() {
             </div>
           </div>
 
-          {!chatbots || chatbots.length === 0 ? (
+          {chatbots.length === 0 ? (
             <Card className="p-12 border-dashed">
               <div className="text-center">
                 <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
