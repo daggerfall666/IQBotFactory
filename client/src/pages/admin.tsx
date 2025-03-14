@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Key, Activity, FileText, Eye, EyeOff, Shield } from "lucide-react";
+import { ArrowLeft, Key, Activity, FileText, Eye, EyeOff, Shield, RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -20,6 +20,12 @@ interface RateLimitResponse {
   config: RateLimitConfig;
 }
 
+interface LogEntry {
+  timestamp: number;
+  level: 'error' | 'info' | 'warn';
+  message: string;
+}
+
 export default function AdminPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -29,6 +35,7 @@ export default function AdminPage() {
   const [rateLimits, setRateLimits] = useState<RateLimitConfig>(DEFAULT_RATE_LIMITS);
   const [isUpdatingLimits, setIsUpdatingLimits] = useState(false);
   const { t } = useTranslation();
+  const [error, setError] = useState<string | null>(null);
 
   const { data: savedKey, isLoading: isLoadingKey } = useQuery<SystemKeyResponse>({
     queryKey: ["/api/admin/system-key"],
@@ -129,6 +136,18 @@ export default function AdminPage() {
     }
   }
 
+  const { 
+    data: logs = [], 
+    isLoading: isLoadingLogs,
+    error: logsError
+  } = useQuery({
+    queryKey: ["/api/admin/logs"],
+    refetchInterval: 30000, 
+    staleTime: 10000,
+    retry: 3
+  });
+
+
   return (
     <div className="container mx-auto py-8">
       <div className="flex items-center gap-4 mb-8">
@@ -199,8 +218,8 @@ export default function AdminPage() {
                       </Button>
                     )}
                   </div>
-                  <Button 
-                    onClick={handleSaveApiKey} 
+                  <Button
+                    onClick={handleSaveApiKey}
                     disabled={!systemApiKey.trim() || isLoading || isLoadingKey}
                   >
                     {isLoading ? "Salvando..." : "Salvar"}
@@ -214,14 +233,42 @@ export default function AdminPage() {
         <TabsContent value="logs">
           <Card>
             <CardHeader>
-              <CardTitle>{t('admin.logs.title')}</CardTitle>
+              <CardTitle>Logs do Sistema</CardTitle>
               <CardDescription>
-                {t('admin.logs.description')}
+                Visualize os logs mais recentes do sistema em tempo real
               </CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="flex justify-between items-center mb-4">
+                <p className="text-sm text-muted-foreground">
+                  Últimos logs (atualizado a cada 30 segundos)
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/logs"] })}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Atualizar
+                </Button>
+              </div>
               <div className="h-[400px] overflow-auto font-mono text-sm whitespace-pre bg-muted p-4 rounded-lg">
-                {t('admin.logs.placeholder')}
+                {isLoadingLogs ? (
+                  <p className="text-muted-foreground">Carregando logs...</p>
+                ) : logsError ? (
+                  <p className="text-destructive">Erro ao carregar logs: {logsError}</p>
+                ) : logs.length === 0 ? (
+                  <p className="text-muted-foreground">Nenhum log encontrado</p>
+                ) : (
+                  logs.map((log, index) => (
+                    <div key={index} className="mb-1">
+                      <span className="text-muted-foreground">{new Date(log.timestamp).toLocaleString()}</span>
+                      <span className={`ml-2 ${log.level === 'error' ? 'text-destructive' : ''}`}>
+                        {log.message}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

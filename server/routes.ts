@@ -603,6 +603,37 @@ Return only the improved prompt without any explanations or metadata.`
     }
   });
 
+  // Get system logs
+  app.get("/api/admin/logs", adminLimiter, async (_req, res) => {
+    try {
+      // Get the last 1000 lines from the server logs
+      const logs = (await db.query(`
+        SELECT 
+          CASE 
+            WHEN error_message IS NOT NULL THEN 'error'
+            WHEN success = false THEN 'warning'
+            ELSE 'info'
+          END as level,
+          CASE
+            WHEN error_message IS NOT NULL THEN error_message
+            ELSE 'Chat interaction: ' || user_message
+          END as message,
+          timestamp
+        FROM chat_interactions
+        ORDER BY timestamp DESC
+        LIMIT 1000
+      `)).rows;
+
+      res.json(logs);
+    } catch (err) {
+      console.error("Error fetching logs:", err);
+      res.status(500).json({ 
+        error: "Failed to fetch logs",
+        details: err instanceof Error ? err.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
