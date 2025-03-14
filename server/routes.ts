@@ -12,8 +12,8 @@ const upload = multer({
 });
 
 async function getAnthropicClient(apiKey?: string | null) {
-  // Se apiKey for null, usa a chave do sistema
-  const key = apiKey === null ? process.env.ANTHROPIC_API_KEY : apiKey;
+  // Se apiKey for undefined ou null, usa a chave do sistema
+  const key = apiKey ?? process.env.ANTHROPIC_API_KEY;
 
   if (!key) {
     throw new Error("No API key available");
@@ -124,6 +124,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const kb = await storage.listKnowledgeBase(botId);
       const context = kb.map(entry => entry.content).join("\n\n");
+
+      console.log("Using API key:", bot.apiKey ? "Bot's own key" : "System key");
 
       try {
         const anthropic = await getAnthropicClient(bot.apiKey);
