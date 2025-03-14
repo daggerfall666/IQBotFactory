@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/navigation-menu";
 import { Bot, Settings2, Wand2, Home, BookOpen, BarChart, Activity } from "lucide-react";
 import { MobileNav } from "./mobile-nav";
+import { ThemeToggle } from "./theme-toggle";
 
 const navigationItems = [
   {
@@ -140,6 +141,7 @@ export function MainNav({
         </NavigationMenu>
 
         <div className="ml-auto flex items-center space-x-4">
+          <ThemeToggle />
           <Link href="/admin">
             <Button variant="ghost" size="sm" className="hidden md:flex">
               <Settings2 className="mr-2 h-4 w-4" />
