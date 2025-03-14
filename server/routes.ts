@@ -8,6 +8,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { db, chatInteractions } from './db';
 import { eq, desc, sql } from 'drizzle-orm';
 import { apiLimiter, chatLimiter, adminLimiter, uploadLimiter } from './middleware/rateLimiter';
+import { performance } from 'perf_hooks';
+import os from 'os';
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -692,6 +694,70 @@ Return only the improved prompt without any explanations or metadata.`
       console.error("Error fetching logs:", err);
       res.status(500).json({ 
         error: "Failed to fetch logs",
+        details: err instanceof Error ? err.message : "Unknown error"
+      });
+    }
+  });
+
+  // Add to existing routes
+  app.get("/api/system/health", adminLimiter, async (_req, res) => {
+    try {
+      // Get system metrics
+      const metrics = {
+        system: {
+          cpuUsage: os.loadavg()[0], // 1 minute load average
+          totalMemory: os.totalmem(),
+          freeMemory: os.freemem(),
+          uptime: os.uptime(),
+          platform: os.platform(),
+        },
+        process: {
+          memoryUsage: process.memoryUsage(),
+          uptime: process.uptime(),
+        }
+      };
+
+      // Get API metrics from the last hour
+      const startTime = new Date();
+      startTime.setHours(startTime.getHours() - 1);
+
+      const apiMetrics = await db
+        .select({
+          total: sql`COUNT(*)`,
+          errors: sql`COUNT(CASE WHEN error_message IS NOT NULL THEN 1 END)`,
+          avgResponseTime: sql`AVG(response_time)`,
+        })
+        .from(chatInteractions)
+        .where(sql`timestamp >= ${startTime}`);
+
+      // Add API metrics to response
+      metrics.api = {
+        totalRequests: apiMetrics[0].total,
+        errorCount: apiMetrics[0].errors,
+        averageResponseTime: apiMetrics[0].avgResponseTime || 0,
+        errorRate: apiMetrics[0].total > 0 ? (apiMetrics[0].errors / apiMetrics[0].total) * 100 : 0
+      };
+
+      // Add database status
+      try {
+        await db.select().from(chatInteractions).limit(1);
+        metrics.database = {
+          status: 'connected',
+          healthy: true
+        };
+      } catch (err) {
+        metrics.database = {
+          status: 'error',
+          healthy: false,
+          error: err instanceof Error ? err.message : 'Unknown database error'
+        };
+      }
+
+      res.json(metrics);
+    } catch (err) {
+      console.error("Error fetching system health metrics:", err);
+      res.status(500).json({ 
+        error: "Failed to fetch system health metrics",
         details: err instanceof Error ? err.message : "Unknown error"
       });
     }

@@ -9,6 +9,7 @@ import KnowledgeBase from "@/pages/knowledge-base";
 import Dashboard from "@/pages/dashboard";
 import Admin from "@/pages/admin";
 import PromptLab from "@/pages/prompt-lab";
+import HealthDashboard from "@/pages/health-dashboard";
 
 function Router() {
   return (
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/bot/:id/dashboard" component={Dashboard} />
       <Route path="/admin" component={Admin} />
       <Route path="/prompt-lab" component={PromptLab} />
+      <Route path="/health" component={HealthDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

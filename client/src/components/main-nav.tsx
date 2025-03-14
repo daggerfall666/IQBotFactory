@@ -10,7 +10,7 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import { Bot, Settings2, Wand2, Home, BookOpen, BarChart } from "lucide-react";
+import { Bot, Settings2, Wand2, Home, BookOpen, BarChart, Activity } from "lucide-react";
 import { MobileNav } from "./mobile-nav";
 
 const navigationItems = [
@@ -38,6 +38,11 @@ const navigationItems = [
     title: "Documentation",
     href: "/docs",
     icon: BookOpen
+  },
+  {
+    title: "System Health",
+    href: "/health",
+    icon: Activity
   }
 ];
 
@@ -99,31 +104,31 @@ export function MainNav({
             </NavigationMenuItem>
             <NavigationMenuItem>
               <NavigationMenuTrigger>
-                <Wand2 className="mr-2 h-4 w-4" />
-                Ferramentas
+                <Activity className="mr-2 h-4 w-4" />
+                Sistema
               </NavigationMenuTrigger>
               <NavigationMenuContent>
                 <ul className="grid w-[400px] gap-3 p-4 md:grid-cols-2">
                   <li>
-                    <Link href="/prompt-lab">
+                    <Link href="/health">
                       <NavigationMenuLink className={cn(
                         "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                       )}>
-                        <div className="text-sm font-medium leading-none">Laboratório de Prompts</div>
+                        <div className="text-sm font-medium leading-none">Sistema</div>
                         <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                          Experimente e refine seus prompts
+                          Monitore a saúde e desempenho do sistema
                         </p>
                       </NavigationMenuLink>
                     </Link>
                   </li>
                   <li>
-                    <Link href="/analytics">
+                    <Link href="/admin">
                       <NavigationMenuLink className={cn(
                         "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                       )}>
-                        <div className="text-sm font-medium leading-none">Analytics</div>
+                        <div className="text-sm font-medium leading-none">Administração</div>
                         <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                          Métricas e insights dos seus chatbots
+                          Configurações gerais do sistema
                         </p>
                       </NavigationMenuLink>
                     </Link>
