@@ -30,8 +30,9 @@ export class MemStorage implements IStorage {
 
   async createChatbot(bot: InsertChatbot): Promise<Chatbot> {
     const id = this.chatbotId++;
-    const chatbot: Chatbot = { ...bot, id };
+    const chatbot: Chatbot = { id, ...bot };
     this.chatbots.set(id, chatbot);
+    console.log("Created chatbot:", chatbot); // Debug log
     return chatbot;
   }
 
@@ -40,13 +41,14 @@ export class MemStorage implements IStorage {
   }
 
   async listChatbots(): Promise<Chatbot[]> {
+    console.log("Current chatbots:", Array.from(this.chatbots.values())); // Debug log
     return Array.from(this.chatbots.values());
   }
 
   async updateChatbot(id: number, bot: Partial<InsertChatbot>): Promise<Chatbot | undefined> {
     const existing = this.chatbots.get(id);
     if (!existing) return undefined;
-    
+
     const updated = { ...existing, ...bot };
     this.chatbots.set(id, updated);
     return updated;

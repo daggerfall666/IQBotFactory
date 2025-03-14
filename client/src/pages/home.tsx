@@ -21,8 +21,9 @@ import {
 export default function Home() {
   const { toast } = useToast();
 
-  const { data: chatbots, isLoading } = useQuery<Chatbot[]>({
-    queryKey: ["/api/chatbots"]
+  const { data: chatbots, isLoading, error } = useQuery<Chatbot[]>({
+    queryKey: ["/api/chatbots"],
+    refetchInterval: 5000, // Recarrega a cada 5 segundos
   });
 
   const createBot = useMutation({
@@ -53,7 +54,9 @@ export default function Home() {
         apiKey: null
       };
 
-      return apiRequest("POST", "/api/chatbots", defaultBot);
+      const response = await apiRequest("POST", "/api/chatbots", defaultBot);
+      const data = await response.json();
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chatbots"] });
@@ -91,6 +94,23 @@ export default function Home() {
     }
   });
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <p className="text-destructive">Erro ao carregar chatbots</p>
+          <Button
+            variant="outline"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/chatbots"] })}
+            className="mt-4"
+          >
+            Tentar novamente
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -122,11 +142,11 @@ export default function Home() {
               className="shadow-lg hover:shadow-primary/20 transition-all"
             >
               <Plus className="mr-2 h-5 w-5" />
-              Criar Novo Bot
+              {createBot.isPending ? "Criando..." : "Criar Novo Bot"}
             </Button>
           </div>
 
-          {chatbots?.length === 0 ? (
+          {!chatbots || chatbots.length === 0 ? (
             <Card className="p-12 border-dashed">
               <div className="text-center">
                 <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -144,7 +164,7 @@ export default function Home() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {chatbots?.map((bot) => (
+              {chatbots.map((bot) => (
                 <Card key={bot.id} className="hover:shadow-lg transition-all">
                   <CardHeader>
                     <div className="flex items-center justify-between">
