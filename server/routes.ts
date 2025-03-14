@@ -245,43 +245,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("Fetching analytics for bot:", botId);
 
-      const interactions = await db
-        .select()
-        .from(chatInteractions)
-        .where(eq(chatInteractions.botId, botId));
+      try {
+        const interactions = await db
+          .select()
+          .from(chatInteractions)
+          .where(eq(chatInteractions.botId, botId));
 
-      console.log("Found interactions:", interactions.length);
+        console.log("Raw interactions data:", interactions);
 
-      // Garantir que temos valores padrão caso não haja interações
-      const totalInteractions = interactions.length;
-      const successfulInteractions = interactions.filter(i => i.success).length;
-      const averageResponseTime = totalInteractions > 0 
-        ? Math.round(interactions.reduce((acc, i) => acc + i.responseTime, 0) / totalInteractions)
-        : 0;
-      const totalTokensUsed = interactions.reduce((acc, i) => acc + i.tokensUsed, 0);
+        // Garantir que temos valores padrão e dados válidos
+        const totalInteractions = interactions?.length || 0;
+        const successfulInteractions = interactions?.filter(i => i?.success === true)?.length || 0;
 
-      // Agrupar interações por dia
-      const usageByDay = interactions.reduce((acc, i) => {
-        const date = new Date(i.timestamp).toISOString().split('T')[0];
-        acc[date] = (acc[date] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
+        let averageResponseTime = 0;
+        if (totalInteractions > 0) {
+          const totalTime = interactions.reduce((acc, i) => {
+            const time = typeof i.responseTime === 'number' ? i.responseTime : 0;
+            return acc + time;
+          }, 0);
+          averageResponseTime = Math.round(totalTime / totalInteractions);
+        }
 
-      const response = {
-        totalInteractions,
-        successfulInteractions,
-        averageResponseTime,
-        totalTokensUsed,
-        usageByDay: Object.entries(usageByDay)
-          .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
-          .map(([date, count]) => ({
-            date,
-            interactions: count
-          }))
-      };
+        const totalTokensUsed = interactions?.reduce((acc, i) => {
+          const tokens = typeof i.tokensUsed === 'number' ? i.tokensUsed : 0;
+          return acc + tokens;
+        }, 0) || 0;
 
-      console.log("Analytics response:", response);
-      res.json(response);
+        // Agrupar interações por dia com validação de data
+        const usageByDay = interactions?.reduce((acc, i) => {
+          try {
+            const timestamp = i?.timestamp ? new Date(i.timestamp) : null;
+            if (timestamp && !isNaN(timestamp.getTime())) {
+              const date = timestamp.toISOString().split('T')[0];
+              acc[date] = (acc[date] || 0) + 1;
+            }
+          } catch (err) {
+            console.error("Error processing interaction date:", err);
+          }
+          return acc;
+        }, {} as Record<string, number>) || {};
+
+        const response = {
+          totalInteractions,
+          successfulInteractions,
+          averageResponseTime,
+          totalTokensUsed,
+          usageByDay: Object.entries(usageByDay)
+            .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+            .map(([date, count]) => ({
+              date,
+              interactions: count
+            }))
+        };
+
+        console.log("Final analytics response:", response);
+        res.json(response);
+      } catch (dbErr) {
+        console.error("Database query error:", dbErr);
+        throw new Error(`Database error: ${dbErr instanceof Error ? dbErr.message : 'Unknown error'}`);
+      }
     } catch (err) {
       console.error("Analytics error:", err);
       res.status(500).json({ 
