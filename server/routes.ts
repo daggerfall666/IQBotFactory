@@ -7,6 +7,7 @@ import multer from "multer";
 import Anthropic from "@anthropic-ai/sdk";
 import { db, chatInteractions } from './db';
 import { eq } from 'drizzle-orm';
+import { apiLimiter, chatLimiter, adminLimiter } from './middleware/rateLimiter';
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -56,8 +57,11 @@ async function getAnthropicClient(apiKey?: string | null) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Apply general API rate limiting to all /api routes
+  app.use('/api', apiLimiter);
+
   // Chatbot CRUD endpoints
-  app.post("/api/chatbots", async (req, res) => {
+  app.post("/api/chatbots", apiLimiter, async (req, res) => {
     try {
       const validated = insertChatbotSchema.parse(req.body);
       const chatbot = await storage.createChatbot(validated);
@@ -71,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/chatbots", async (_req, res) => {
+  app.get("/api/chatbots", apiLimiter, async (_req, res) => {
     try {
       const chatbots = await storage.listChatbots();
       res.json(chatbots);
@@ -81,7 +85,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/chatbots/:id", async (req, res) => {
+  app.get("/api/chatbots/:id", apiLimiter, async (req, res) => {
     try {
       const chatbot = await storage.getChatbot(parseInt(req.params.id));
       if (!chatbot) {
@@ -95,7 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/chatbots/:id", async (req, res) => {
+  app.patch("/api/chatbots/:id", apiLimiter, async (req, res) => {
     try {
       const validated = insertChatbotSchema.partial().parse(req.body);
       const chatbot = await storage.updateChatbot(parseInt(req.params.id), validated);
@@ -113,7 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/chatbots/:id", async (req, res) => {
+  app.delete("/api/chatbots/:id", apiLimiter, async (req, res) => {
     try {
       const deleted = await storage.deleteChatbot(parseInt(req.params.id));
       if (!deleted) {
@@ -126,8 +130,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Chat endpoint - UPDATED
-  app.post("/api/chat/:botId", async (req, res) => {
+  // Chat endpoint with stricter rate limiting
+  app.post("/api/chat/:botId", chatLimiter, async (req, res) => {
     try {
       const { message } = req.body;
       if (!message || typeof message !== 'string' || message.length > 2000) {
@@ -244,8 +248,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Novo endpoint para analytics
-  app.get("/api/analytics/:botId", async (req, res) => {
+  // Analytics endpoint
+  app.get("/api/analytics/:botId", apiLimiter, async (req, res) => {
     try {
       const botId = parseInt(req.params.botId);
       if (isNaN(botId)) {
@@ -347,8 +351,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // Admin routes
-  app.post("/api/admin/system-key", async (req, res) => {
+  // Admin routes with strict rate limiting
+  app.post("/api/admin/system-key", adminLimiter, async (req, res) => {
     try {
       const { key } = req.body;
 
@@ -383,7 +387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Novo endpoint para buscar a chave API do sistema
-  app.get("/api/admin/system-key", async (_req, res) => {
+  app.get("/api/admin/system-key", adminLimiter, async (_req, res) => {
     try {
       const key = await storage.getSystemSetting('ANTHROPIC_API_KEY');
       res.json({ key });
