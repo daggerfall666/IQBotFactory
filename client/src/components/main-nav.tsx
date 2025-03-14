@@ -9,17 +9,48 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu"
+} from "@/components/ui/navigation-menu";
 import { Bot, Settings2, Wand2, Home, BookOpen, BarChart } from "lucide-react";
+import { MobileNav } from "./mobile-nav";
+
+const navigationItems = [
+  {
+    title: "Dashboard",
+    href: "/",
+    icon: Home
+  },
+  {
+    title: "Chatbots",
+    href: "/bot/new",
+    icon: Bot
+  },
+  {
+    title: "Analytics",
+    href: "/analytics",
+    icon: BarChart
+  },
+  {
+    title: "Prompt Lab",
+    href: "/prompt-lab",
+    icon: Wand2
+  },
+  {
+    title: "Documentation",
+    href: "/docs",
+    icon: BookOpen
+  }
+];
 
 export function MainNav({
   className,
   ...props
 }: React.HTMLAttributes<HTMLElement>) {
   return (
-    <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
-        <NavigationMenu>
+        <MobileNav items={navigationItems} />
+
+        <NavigationMenu className="hidden md:flex">
           <NavigationMenuList>
             <NavigationMenuItem>
               <Link href="/">
@@ -47,18 +78,6 @@ export function MainNav({
                         </div>
                         <p className="text-sm leading-tight text-muted-foreground">
                           Configure um novo assistente virtual para interagir com seus usuários
-                        </p>
-                      </NavigationMenuLink>
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/bot/templates">
-                      <NavigationMenuLink className={cn(
-                        "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                      )}>
-                        <div className="text-sm font-medium leading-none">Templates</div>
-                        <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                          Comece com um modelo pré-configurado
                         </p>
                       </NavigationMenuLink>
                     </Link>
@@ -109,26 +128,15 @@ export function MainNav({
                       </NavigationMenuLink>
                     </Link>
                   </li>
-                  <li>
-                    <Link href="/docs">
-                      <NavigationMenuLink className={cn(
-                        "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                      )}>
-                        <div className="text-sm font-medium leading-none">Documentação</div>
-                        <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                          Guias e referências da API
-                        </p>
-                      </NavigationMenuLink>
-                    </Link>
-                  </li>
                 </ul>
               </NavigationMenuContent>
             </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>
+
         <div className="ml-auto flex items-center space-x-4">
           <Link href="/admin">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" className="hidden md:flex">
               <Settings2 className="mr-2 h-4 w-4" />
               Admin
             </Button>
