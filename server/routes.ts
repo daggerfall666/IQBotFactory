@@ -12,9 +12,11 @@ const upload = multer({
 });
 
 // the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY
-});
+async function getAnthropicClient(apiKey?: string | null) {
+  return new Anthropic({
+    apiKey: apiKey || process.env.ANTHROPIC_API_KEY
+  });
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Chatbot CRUD endpoints
@@ -111,18 +113,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const kb = await storage.listKnowledgeBase(botId);
       const context = kb.map(entry => entry.content).join("\n\n");
 
+      const anthropic = await getAnthropicClient(bot.apiKey);
+
       const response = await anthropic.messages.create({
-        model: "claude-3-7-sonnet-20250219",
+        model: bot.settings.model,
         max_tokens: bot.settings.maxTokens,
+        temperature: bot.settings.temperature,
         messages: [
-          { role: "user", content: `Context: ${context}\n\nUser question: ${message}` }
+          { 
+            role: "system",
+            content: bot.settings.systemPrompt
+          },
+          { 
+            role: "user", 
+            content: context ? 
+              `Context: ${context}\n\nUser question: ${message}` :
+              message
+          }
         ],
       });
 
       res.json({ response: response.content[0].text });
     } catch (err) {
       console.error("Chat error:", err);
-      res.status(500).json({ error: "Failed to process chat message" });
+      res.status(500).json({ 
+        error: "Failed to process chat message",
+        details: err instanceof Error ? err.message : undefined
+      });
     }
   });
 
