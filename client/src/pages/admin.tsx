@@ -366,7 +366,7 @@ export default function AdminPage() {
           onValueChange={setActiveTab}
           className="space-y-8"
         >
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto gap-2 p-2">
             <TabsTrigger 
               value="api" 
               className="flex items-center gap-2 min-w-[140px]"
