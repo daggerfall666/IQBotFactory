@@ -8,6 +8,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ArrowLeft, Key, Activity, FileText, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 interface SystemKeyResponse {
   key: string | null;
@@ -19,6 +20,7 @@ export default function AdminPage() {
   const [systemApiKey, setSystemApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useTranslation();
 
   // Busca a chave API do sistema quando a página carrega
   const { data: savedKey, isLoading: isLoadingKey } = useQuery<SystemKeyResponse>({
@@ -35,7 +37,23 @@ export default function AdminPage() {
   }, [savedKey]);
 
   async function handleSaveApiKey() {
-    if (!systemApiKey.trim()) return;
+    if (!systemApiKey.trim()) {
+      toast({
+        title: t('admin.errors.general.error'),
+        description: t('admin.validation.api_key_required'),
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!systemApiKey.startsWith('sk-ant-')) {
+      toast({
+        title: t('admin.errors.api_key.invalid_format'),
+        description: t('admin.validation.api_key_format'),
+        variant: "destructive"
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -43,12 +61,12 @@ export default function AdminPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.details || data.error || "Erro desconhecido");
+        throw new Error(data.details || data.error || t('admin.errors.general.unknown'));
       }
 
       toast({
         title: "Sucesso",
-        description: "Chave API do sistema atualizada com sucesso"
+        description: t('admin.success.api_key_updated')
       });
 
       // Atualiza a chave no cache
@@ -56,8 +74,8 @@ export default function AdminPage() {
 
     } catch (error: any) {
       toast({
-        title: "Erro",
-        description: error.message || "Não foi possível salvar a chave API",
+        title: t('admin.errors.general.error'),
+        description: error.message || t('admin.errors.api_key.save_failed'),
         variant: "destructive"
       });
       setSystemApiKey(""); // Limpa apenas em caso de erro
@@ -71,40 +89,40 @@ export default function AdminPage() {
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" onClick={() => navigate("/")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar
+          {t('admin.buttons.back')}
         </Button>
-        <h1 className="text-4xl font-bold">Configurações do Sistema</h1>
+        <h1 className="text-4xl font-bold">{t('admin.title')}</h1>
       </div>
 
       <Tabs defaultValue="api" className="space-y-6">
         <TabsList>
           <TabsTrigger value="api" className="flex items-center gap-2">
             <Key className="w-4 h-4" />
-            API
+            {t('admin.tabs.api')}
           </TabsTrigger>
           <TabsTrigger value="logs" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
-            Logs
+            {t('admin.tabs.logs')}
           </TabsTrigger>
           <TabsTrigger value="stats" className="flex items-center gap-2">
             <Activity className="w-4 h-4" />
-            Estatísticas
+            {t('admin.tabs.stats')}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="api">
           <Card>
             <CardHeader>
-              <CardTitle>Configurações da API</CardTitle>
+              <CardTitle>{t('admin.api.title')}</CardTitle>
               <CardDescription>
-                Gerencie as chaves API do sistema
+                {t('admin.api.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <h3 className="font-medium">Chave API do Sistema</h3>
+                <h3 className="font-medium">{t('admin.api.apikey.title')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Esta é a chave API padrão usada quando um bot não tem sua própria chave configurada.
+                  {t('admin.api.apikey.description')}
                 </p>
                 <div className="flex gap-2">
                   <div className="flex-1 relative">
@@ -136,7 +154,7 @@ export default function AdminPage() {
                     onClick={handleSaveApiKey} 
                     disabled={!systemApiKey.trim() || isLoading || isLoadingKey}
                   >
-                    {isLoading ? "Salvando..." : "Salvar"}
+                    {isLoading ? t('admin.buttons.saving') : t('admin.buttons.save')}
                   </Button>
                 </div>
               </div>
@@ -147,14 +165,14 @@ export default function AdminPage() {
         <TabsContent value="logs">
           <Card>
             <CardHeader>
-              <CardTitle>Logs do Sistema</CardTitle>
+              <CardTitle>{t('admin.logs.title')}</CardTitle>
               <CardDescription>
-                Visualize os logs de atividade do sistema
+                {t('admin.logs.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-[400px] overflow-auto font-mono text-sm whitespace-pre bg-muted p-4 rounded-lg">
-                [Em desenvolvimento] Aqui serão exibidos os logs do sistema
+                {t('admin.logs.placeholder')}
               </div>
             </CardContent>
           </Card>
@@ -163,16 +181,16 @@ export default function AdminPage() {
         <TabsContent value="stats">
           <Card>
             <CardHeader>
-              <CardTitle>Estatísticas</CardTitle>
+              <CardTitle>{t('admin.stats.title')}</CardTitle>
               <CardDescription>
-                Métricas e estatísticas de uso
+                {t('admin.stats.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Total de Bots</CardTitle>
+                    <CardTitle className="text-lg">{t('admin.stats.total_bots')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-3xl font-bold">0</p>
@@ -181,7 +199,7 @@ export default function AdminPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Mensagens Hoje</CardTitle>
+                    <CardTitle className="text-lg">{t('admin.stats.messages_today')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-3xl font-bold">0</p>
@@ -190,7 +208,7 @@ export default function AdminPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Usuários Ativos</CardTitle>
+                    <CardTitle className="text-lg">{t('admin.stats.active_users')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-3xl font-bold">0</p>
