@@ -173,10 +173,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const endTime = Date.now();
         const responseTime = endTime - startTime;
 
+        // Get the response content safely
+        const botResponse = response.content[0].type === 'text' 
+          ? response.content[0].text 
+          : 'Error: Unexpected response format';
+
         await db.insert(chatInteractions).values({
           botId,
           userMessage: message,
-          botResponse: response.content[0].text,
+          botResponse,
           model: bot.settings.model,
           tokensUsed: response.usage?.output_tokens || 0,
           responseTime,
@@ -184,7 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           timestamp: new Date() 
         });
 
-        res.json({ response: response.content[0].text });
+        res.json({ response: botResponse });
       } catch (err) {
         console.error("Chat error:", err);
 

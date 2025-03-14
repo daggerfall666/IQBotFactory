@@ -26,7 +26,22 @@ export interface IStorage {
 
 export class PostgresStorage implements IStorage {
   async createChatbot(bot: InsertChatbot): Promise<Chatbot> {
-    const [chatbot] = await db.insert(chatbots).values(bot).returning();
+    // Validate model type before insertion
+    if (!["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"].includes(bot.settings.model)) {
+      throw new Error("Invalid model type");
+    }
+
+    const [chatbot] = await db.insert(chatbots).values({
+      name: bot.name,
+      description: bot.description || "",
+      settings: {
+        ...bot.settings,
+        model: bot.settings.model as "claude-3-opus-20240229" | "claude-3-sonnet-20240229" | "claude-3-haiku-20240307"
+      },
+      wordpressConfig: bot.wordpressConfig,
+      apiKey: bot.apiKey
+    }).returning();
+
     console.log("Created chatbot:", chatbot);
     return chatbot;
   }
@@ -44,11 +59,23 @@ export class PostgresStorage implements IStorage {
   }
 
   async updateChatbot(id: number, bot: Partial<InsertChatbot>): Promise<Chatbot | undefined> {
+    // Validate model type if it's being updated
+    if (bot.settings?.model && !["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"].includes(bot.settings.model)) {
+      throw new Error("Invalid model type");
+    }
+
     const [updated] = await db
       .update(chatbots)
-      .set(bot)
+      .set({
+        ...bot,
+        settings: bot.settings ? {
+          ...bot.settings,
+          model: bot.settings.model as "claude-3-opus-20240229" | "claude-3-sonnet-20240229" | "claude-3-haiku-20240307"
+        } : undefined
+      })
       .where(eq(chatbots.id, id))
       .returning();
+
     console.log("Updated chatbot:", updated);
     return updated;
   }
