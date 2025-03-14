@@ -2,10 +2,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Settings2, Database } from "lucide-react";
+import { Plus, Settings2, Database, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Chatbot } from "@shared/schema";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function Home() {
   const { toast } = useToast();
@@ -55,6 +66,26 @@ export default function Home() {
       toast({
         title: "Erro",
         description: "Não foi possível criar o chatbot",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deleteBot = useMutation({
+    mutationFn: async (botId: number) => {
+      await apiRequest("DELETE", `/api/chatbots/${botId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chatbots"] });
+      toast({
+        title: "Sucesso",
+        description: "Chatbot excluído"
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o chatbot",
         variant: "destructive"
       });
     }
@@ -116,8 +147,36 @@ export default function Home() {
               {chatbots?.map((bot) => (
                 <Card key={bot.id} className="hover:shadow-lg transition-all">
                   <CardHeader>
-                    <CardTitle>{bot.name}</CardTitle>
-                    <CardDescription>{bot.description || "Sem descrição"}</CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>{bot.name}</CardTitle>
+                        <CardDescription>{bot.description || "Sem descrição"}</CardDescription>
+                      </div>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir Chatbot</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir este chatbot? Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteBot.mutate(bot.id)}
+                              className="bg-destructive hover:bg-destructive/90"
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">

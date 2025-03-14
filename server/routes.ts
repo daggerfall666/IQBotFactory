@@ -66,6 +66,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/chatbots/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteChatbot(parseInt(req.params.id));
+      if (!deleted) {
+        res.status(404).json({ error: "Chatbot not found" });
+        return;
+      }
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to delete chatbot" });
+    }
+  });
+
   // Knowledge base endpoints
   app.post("/api/knowledge-base", upload.single("file"), async (req, res) => {
     try {
@@ -121,14 +134,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         temperature: bot.settings.temperature,
         messages: [
           { 
-            role: "system",
-            content: bot.settings.systemPrompt
-          },
-          { 
             role: "user", 
             content: context ? 
-              `Context: ${context}\n\nUser question: ${message}` :
-              message
+              `Sistema: ${bot.settings.systemPrompt}\n\nContexto: ${context}\n\nUsuário: ${message}` :
+              `Sistema: ${bot.settings.systemPrompt}\n\nUsuário: ${message}`
           }
         ],
       });
