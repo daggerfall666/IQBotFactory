@@ -236,7 +236,7 @@ export default function Home() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Database className="h-4 w-4" />
-                          {bot.apiKey ? "Chave API personalizada" : "Chave API padrão"}
+                          {bot.apiKey === null ? "Chave API padrão" : "Chave API personalizada"}
                         </div>
                       </div>
 
