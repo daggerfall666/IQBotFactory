@@ -34,10 +34,18 @@ export function ChatInterface({ botId, className }: ChatInterfaceProps) {
     try {
       const response = await sendMessage(botId, input);
       setMessages(prev => [...prev, { role: "assistant", content: response }]);
-    } catch (error) {
+    } catch (error: any) {
+      let errorMessage = "Erro ao enviar mensagem";
+
+      if (error.message.includes("invalid x-api-key")) {
+        errorMessage = "Chave API inválida. Por favor, verifique a configuração do bot.";
+      } else if (error.message.includes("No API key provided")) {
+        errorMessage = "Chave API não configurada. Por favor, configure uma chave API nas configurações do bot.";
+      }
+
       toast({
-        title: "Error",
-        description: "Failed to send message",
+        title: "Erro",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -75,11 +83,11 @@ export function ChatInterface({ botId, className }: ChatInterfaceProps) {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a message..."
+            placeholder="Digite uma mensagem..."
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
           />
           <Button onClick={handleSend} disabled={isLoading}>
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar"}
           </Button>
         </div>
       </CardContent>

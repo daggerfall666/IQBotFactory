@@ -137,38 +137,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const kb = await storage.listKnowledgeBase(botId);
       const context = kb.map(entry => entry.content).join("\n\n");
 
-      const anthropic = await getAnthropicClient(bot.apiKey);
+      try {
+        const anthropic = await getAnthropicClient(bot.apiKey);
 
-      const response = await anthropic.messages.create({
-        model: bot.settings.model,
-        max_tokens: bot.settings.maxTokens,
-        temperature: bot.settings.temperature,
-        messages: [
-          { 
-            role: "user", 
-            content: context ? 
-              `Sistema: ${bot.settings.systemPrompt}\n\nContexto: ${context}\n\nUsuário: ${message}` :
-              `Sistema: ${bot.settings.systemPrompt}\n\nUsuário: ${message}`
-          }
-        ],
-      });
+        const response = await anthropic.messages.create({
+          model: bot.settings.model,
+          max_tokens: bot.settings.maxTokens,
+          temperature: bot.settings.temperature,
+          messages: [
+            { 
+              role: "user", 
+              content: context ? 
+                `Sistema: ${bot.settings.systemPrompt}\n\nContexto: ${context}\n\nUsuário: ${message}` :
+                `Sistema: ${bot.settings.systemPrompt}\n\nUsuário: ${message}`
+            }
+          ],
+        });
 
-      res.json({ response: response.content[0].text });
+        res.json({ response: response.content[0].text });
+      } catch (err) {
+        console.error("Chat error:", err);
+        if (err instanceof Anthropic.APIError) {
+          res.status(err.status || 500).json({
+            error: "AI Service Error",
+            details: "Verifique se a chave API está configurada corretamente"
+          });
+        } else if (err instanceof Error) {
+          res.status(500).json({
+            error: "Internal Server Error",
+            details: process.env.NODE_ENV === 'development' ? err.message : undefined
+          });
+        } else {
+          res.status(500).json({ error: "Unknown error occurred" });
+        }
+      }
     } catch (err) {
       console.error("Chat error:", err);
-      if (err instanceof Anthropic.APIError) {
-        res.status(err.status || 500).json({
-          error: "AI Service Error",
-          details: err.message
-        });
-      } else if (err instanceof Error) {
-        res.status(500).json({
-          error: "Internal Server Error",
-          details: process.env.NODE_ENV === 'development' ? err.message : undefined
-        });
-      } else {
-        res.status(500).json({ error: "Unknown error occurred" });
-      }
+      res.status(500).json({ error: "Failed to process chat message" });
     }
   });
 
