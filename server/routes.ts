@@ -181,6 +181,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Atualiza a variável de ambiente
       process.env.ANTHROPIC_API_KEY = key;
 
+      // Atualiza todos os bots que usam a chave do sistema (apiKey = null)
+      try {
+        const bots = await storage.listChatbots();
+        for (const bot of bots) {
+          if (bot.apiKey === null) {
+            await storage.updateChatbot(bot.id, { apiKey: key }); // Corrected to use the new key
+          }
+        }
+      } catch (err) {
+        console.error("Error updating bots:", err);
+      }
+
       res.json({ success: true });
     } catch (err) {
       console.error("Error updating system API key:", err);
