@@ -1,16 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Key, Activity, FileText, Eye, EyeOff, Shield, RefreshCw } from "lucide-react";
+import { ArrowLeft, Key, Activity, FileText, Eye, EyeOff, Shield, RefreshCw, Info } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { RateLimitConfig, DEFAULT_RATE_LIMITS } from "@shared/schema";
 import { Slider } from "@/components/ui/slider";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
 
 interface SystemKeyResponse {
   key: string | null;
@@ -34,7 +40,6 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [rateLimits, setRateLimits] = useState<RateLimitConfig>(DEFAULT_RATE_LIMITS);
   const [isUpdatingLimits, setIsUpdatingLimits] = useState(false);
-  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
 
   const { data: savedKey, isLoading: isLoadingKey } = useQuery<SystemKeyResponse>({
@@ -52,8 +57,8 @@ export default function AdminPage() {
   async function handleSaveApiKey() {
     if (!systemApiKey.trim()) {
       toast({
-        title: t('admin.errors.general.error'),
-        description: t('admin.validation.api_key_required'),
+        title: 'Erro',
+        description: 'A chave API é obrigatória',
         variant: "destructive"
       });
       return;
@@ -61,8 +66,8 @@ export default function AdminPage() {
 
     if (!systemApiKey.startsWith('sk-ant-')) {
       toast({
-        title: t('admin.errors.api_key.invalid_format'),
-        description: t('admin.validation.api_key_format'),
+        title: 'Erro',
+        description: 'Formato inválido da chave API. Certifique-se de que começa com "sk-ant-"',
         variant: "destructive"
       });
       return;
@@ -74,20 +79,20 @@ export default function AdminPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.details || data.error || t('admin.errors.general.unknown'));
+        throw new Error(data.details || data.error || "Erro desconhecido");
       }
 
       toast({
         title: "Sucesso",
-        description: t('admin.success.api_key_updated')
+        description: "Chave API atualizada com sucesso"
       });
 
       queryClient.invalidateQueries({ queryKey: ["/api/admin/system-key"] });
 
     } catch (error: any) {
       toast({
-        title: t('admin.errors.general.error'),
-        description: error.message || t('admin.errors.api_key.save_failed'),
+        title: "Erro",
+        description: error.message || "Não foi possível salvar a chave API",
         variant: "destructive"
       });
       setSystemApiKey("");
@@ -115,26 +120,105 @@ export default function AdminPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.details || data.error || t('admin.errors.general.unknown'));
+        throw new Error(data.details || data.error || "Erro desconhecido");
       }
 
       toast({
-        title: t('admin.success.title'),
-        description: t('admin.success.rate_limits_updated')
+        title: "Sucesso",
+        description: "Limites de requisição atualizados com sucesso"
       });
 
       queryClient.invalidateQueries({ queryKey: ["/api/admin/rate-limits"] });
 
     } catch (error: any) {
       toast({
-        title: t('admin.errors.general.error'),
-        description: error.message || t('admin.errors.rate_limits.save_failed'),
+        title: "Erro",
+        description: error.message || "Não foi possível salvar os limites",
         variant: "destructive"
       });
     } finally {
       setIsUpdatingLimits(false);
     }
   }
+
+  const RateLimitSection = ({ 
+    title, 
+    description, 
+    limits, 
+    path, 
+    minMax = 10,
+    maxMax = 500,
+    step = 10 
+  }: { 
+    title: string, 
+    description: string, 
+    limits: { max: number, windowMs: number },
+    path: 'api' | 'chat' | 'admin' | 'upload',
+    minMax?: number,
+    maxMax?: number,
+    step?: number
+  }) => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <h3 className="font-medium">{title}</h3>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger>
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="max-w-xs">{description}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      <div className="space-y-6">
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm">Máximo de requisições</span>
+            <span className="text-sm font-mono">{limits.max}</span>
+          </div>
+          <div className="space-y-2">
+            <Slider
+              value={[limits.max]}
+              onValueChange={([value]) => setRateLimits(prev => ({
+                ...prev,
+                [path]: { ...prev[path], max: value }
+              }))}
+              min={minMax}
+              max={maxMax}
+              step={step}
+              disabled={isUpdatingLimits || isLoadingLimits}
+            />
+            <Progress value={(limits.max / maxMax) * 100} className="h-1" />
+          </div>
+        </div>
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm">Intervalo de tempo</span>
+            <span className="text-sm font-mono">{limits.windowMs / 1000}s</span>
+          </div>
+          <div className="space-y-2">
+            <Slider
+              value={[limits.windowMs / 1000]}
+              onValueChange={([value]) => setRateLimits(prev => ({
+                ...prev,
+                [path]: { ...prev[path], windowMs: value * 1000 }
+              }))}
+              min={30}
+              max={300}
+              step={30}
+              disabled={isUpdatingLimits || isLoadingLimits}
+            />
+            <Progress value={(limits.windowMs / (300 * 1000)) * 100} className="h-1" />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Taxa efetiva: {((limits.max / (limits.windowMs / 1000)) * 60).toFixed(1)} req/min
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 
   const { 
     data: logs = [], 
@@ -326,173 +410,59 @@ export default function AdminPage() {
                 Configure os limites de requisição para diferentes tipos de operações
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="font-medium">API Geral</h3>
-                <div className="space-y-8">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm">Máximo de requisições</span>
-                      <span className="text-sm font-mono">{rateLimits.api.max}</span>
-                    </div>
-                    <Slider
-                      value={[rateLimits.api.max]}
-                      onValueChange={([value]) => setRateLimits(prev => ({
-                        ...prev,
-                        api: { ...prev.api, max: value }
-                      }))}
-                      min={10}
-                      max={500}
-                      step={10}
-                      disabled={isUpdatingLimits || isLoadingLimits}
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm">{t('admin.rate_limits.window_ms')}</span>
-                      <span className="text-sm font-mono">{rateLimits.api.windowMs / 1000}s</span>
-                    </div>
-                    <Slider
-                      value={[rateLimits.api.windowMs / 1000]}
-                      onValueChange={([value]) => setRateLimits(prev => ({
-                        ...prev,
-                        api: { ...prev.api, windowMs: value * 1000 }
-                      }))}
-                      min={30}
-                      max={300}
-                      step={30}
-                      disabled={isUpdatingLimits || isLoadingLimits}
-                    />
-                  </div>
-                </div>
-              </div>
+            <CardContent className="space-y-8">
+              <RateLimitSection 
+                title="API Geral"
+                description="Limites globais aplicados a todas as requisições da API"
+                limits={rateLimits.api}
+                path="api"
+                maxMax={500}
+              />
 
-              <div className="space-y-4">
-                <h3 className="font-medium">{t('admin.rate_limits.chat.title')}</h3>
-                <div className="space-y-8">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm">{t('admin.rate_limits.max_requests')}</span>
-                      <span className="text-sm font-mono">{rateLimits.chat.max}</span>
-                    </div>
-                    <Slider
-                      value={[rateLimits.chat.max]}
-                      onValueChange={([value]) => setRateLimits(prev => ({
-                        ...prev,
-                        chat: { ...prev.chat, max: value }
-                      }))}
-                      min={5}
-                      max={100}
-                      step={5}
-                      disabled={isUpdatingLimits || isLoadingLimits}
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm">{t('admin.rate_limits.window_ms')}</span>
-                      <span className="text-sm font-mono">{rateLimits.chat.windowMs / 1000}s</span>
-                    </div>
-                    <Slider
-                      value={[rateLimits.chat.windowMs / 1000]}
-                      onValueChange={([value]) => setRateLimits(prev => ({
-                        ...prev,
-                        chat: { ...prev.chat, windowMs: value * 1000 }
-                      }))}
-                      min={30}
-                      max={300}
-                      step={30}
-                      disabled={isUpdatingLimits || isLoadingLimits}
-                    />
-                  </div>
-                </div>
-              </div>
+              <RateLimitSection 
+                title="Chat"
+                description="Limites específicos para as interações de chat com o Claude AI"
+                limits={rateLimits.chat}
+                path="chat"
+                minMax={5}
+                maxMax={100}
+                step={5}
+              />
 
-              <div className="space-y-4">
-                <h3 className="font-medium">{t('admin.rate_limits.admin.title')}</h3>
-                <div className="space-y-8">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm">{t('admin.rate_limits.max_requests')}</span>
-                      <span className="text-sm font-mono">{rateLimits.admin.max}</span>
-                    </div>
-                    <Slider
-                      value={[rateLimits.admin.max]}
-                      onValueChange={([value]) => setRateLimits(prev => ({
-                        ...prev,
-                        admin: { ...prev.admin, max: value }
-                      }))}
-                      min={5}
-                      max={50}
-                      step={5}
-                      disabled={isUpdatingLimits || isLoadingLimits}
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm">{t('admin.rate_limits.window_ms')}</span>
-                      <span className="text-sm font-mono">{rateLimits.admin.windowMs / 1000}s</span>
-                    </div>
-                    <Slider
-                      value={[rateLimits.admin.windowMs / 1000]}
-                      onValueChange={([value]) => setRateLimits(prev => ({
-                        ...prev,
-                        admin: { ...prev.admin, windowMs: value * 1000 }
-                      }))}
-                      min={30}
-                      max={300}
-                      step={30}
-                      disabled={isUpdatingLimits || isLoadingLimits}
-                    />
-                  </div>
-                </div>
-              </div>
+              <RateLimitSection 
+                title="Administração"
+                description="Limites para operações administrativas e configurações do sistema"
+                limits={rateLimits.admin}
+                path="admin"
+                minMax={5}
+                maxMax={50}
+                step={5}
+              />
 
-              <div className="space-y-4">
-                <h3 className="font-medium">{t('admin.rate_limits.upload.title')}</h3>
-                <div className="space-y-8">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm">{t('admin.rate_limits.max_requests')}</span>
-                      <span className="text-sm font-mono">{rateLimits.upload.max}</span>
-                    </div>
-                    <Slider
-                      value={[rateLimits.upload.max]}
-                      onValueChange={([value]) => setRateLimits(prev => ({
-                        ...prev,
-                        upload: { ...prev.upload, max: value }
-                      }))}
-                      min={1}
-                      max={20}
-                      step={1}
-                      disabled={isUpdatingLimits || isLoadingLimits}
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm">{t('admin.rate_limits.window_ms')}</span>
-                      <span className="text-sm font-mono">{rateLimits.upload.windowMs / 1000}s</span>
-                    </div>
-                    <Slider
-                      value={[rateLimits.upload.windowMs / 1000]}
-                      onValueChange={([value]) => setRateLimits(prev => ({
-                        ...prev,
-                        upload: { ...prev.upload, windowMs: value * 1000 }
-                      }))}
-                      min={30}
-                      max={300}
-                      step={30}
-                      disabled={isUpdatingLimits || isLoadingLimits}
-                    />
-                  </div>
-                </div>
-              </div>
+              <RateLimitSection 
+                title="Upload"
+                description="Limites para o upload de arquivos e documentos"
+                limits={rateLimits.upload}
+                path="upload"
+                minMax={1}
+                maxMax={20}
+                step={1}
+              />
 
               <div className="flex justify-end pt-4">
                 <Button
                   onClick={handleSaveRateLimits}
                   disabled={isUpdatingLimits || isLoadingLimits}
+                  className="min-w-[200px]"
                 >
-                  {isUpdatingLimits ? "Salvando..." : "Salvar Configurações"}
+                  {isUpdatingLimits ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Salvar Configurações"
+                  )}
                 </Button>
               </div>
             </CardContent>
