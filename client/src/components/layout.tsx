@@ -13,9 +13,9 @@ export function Layout({ children, showSidebar = true, botId }: LayoutProps) {
       <MainNav />
       <div className="flex">
         {showSidebar && (
-          <Sidebar botId={botId} className="w-64 flex-shrink-0" />
+          <Sidebar botId={botId} className="w-64 flex-shrink-0 hidden md:block" />
         )}
-        <main className="flex-1">
+        <main className="flex-1 min-h-[calc(100vh-4rem)]">
           {children}
         </main>
       </div>
