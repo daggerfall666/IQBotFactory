@@ -274,7 +274,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const interactions = await db
           .select()
           .from(chatInteractions)
-          .where(eq(chatInteractions.botId, botId));
+          .where(eq(chatInteractions.botId, botId))
+          .catch(err => {
+            console.error("Database query error:", err);
+            throw new Error("Failed to fetch chat interactions");
+          });
 
         console.log("Raw interactions data:", interactions);
 

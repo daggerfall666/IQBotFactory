@@ -18,10 +18,10 @@ export default function Dashboard() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
-  const { data: analytics, isLoading, error } = useQuery<Analytics>({
+  const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useQuery<Analytics>({
     queryKey: [`/api/analytics/${id}`],
     refetchInterval: 30000,
-    retry: 3,
+    retry: 1,
     onError: (err) => {
       console.error("Error fetching analytics:", err);
       toast({
@@ -32,10 +32,13 @@ export default function Dashboard() {
     }
   });
 
-  const { data: bot } = useQuery({
+  const { data: bot, isLoading: botLoading, error: botError } = useQuery({
     queryKey: [`/api/chatbots/${id}`],
-    retry: 3
+    retry: 1
   });
+
+  const isLoading = analyticsLoading || botLoading;
+  const error = analyticsError || botError;
 
   if (error) {
     return (
