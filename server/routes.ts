@@ -5,16 +5,22 @@ import { insertChatbotSchema, insertKnowledgeBaseSchema } from "@shared/schema";
 import { ZodError } from "zod";
 import multer from "multer";
 import Anthropic from "@anthropic-ai/sdk";
-import { db, chatInteractions } from './db'; // Added import for db and table
-import { eq } from 'drizzle-orm'; // Added import for eq
+import { db, chatInteractions } from './db';
+import { eq } from 'drizzle-orm';
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 } 
 });
 
 async function validateAnthropicKey(apiKey: string): Promise<boolean> {
   try {
+    // Verifica se a chave tem o formato correto
+    if (!apiKey.startsWith('sk-ant-')) {
+      console.error("Invalid API key format");
+      return false;
+    }
+
     const anthropic = new Anthropic({ apiKey });
 
     // Tenta fazer uma chamada simples para validar a chave
@@ -177,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tokensUsed: response.usage?.output_tokens || 0,
           responseTime,
           success: true,
-          timestamp: new Date() // Added timestamp
+          timestamp: new Date() 
         });
 
         res.json({ response: response.content[0].text });
@@ -194,7 +200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           responseTime: 0,
           success: false,
           errorMessage: err instanceof Error ? err.message : "Unknown error",
-          timestamp: new Date() // Added timestamp
+          timestamp: new Date() 
         });
 
         if (err instanceof Anthropic.APIError) {
@@ -242,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calcula métricas
       const totalInteractions = interactions.length;
       const successfulInteractions = interactions.filter(i => i.success).length;
-      const averageResponseTime = interactions.reduce((acc, i) => acc + i.responseTime, 0) / (totalInteractions || 1); // Handle division by zero
+      const averageResponseTime = interactions.reduce((acc, i) => acc + i.responseTime, 0) / (totalInteractions || 1); 
       const totalTokensUsed = interactions.reduce((acc, i) => acc + i.tokensUsed, 0);
 
       // Agrupa por dia para o gráfico de uso
@@ -283,7 +289,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Valida a chave antes de salvar
       const isValid = await validateAnthropicKey(key);
       if (!isValid) {
-        res.status(400).json({ error: "Invalid API key. Please check if the key is correct and try again." });
+        res.status(400).json({ 
+          error: "Chave API inválida. Por favor, verifique se a chave está correta e tente novamente.",
+          details: "A chave API fornecida não é válida ou está expirada."
+        });
         return;
       }
 
@@ -295,17 +304,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const bots = await storage.listChatbots();
         for (const bot of bots) {
           if (bot.apiKey === null) {
-            await storage.updateChatbot(bot.id, { apiKey: key });
+            await storage.updateChatbot(bot.id, { apiKey: null });
           }
         }
       } catch (err) {
         console.error("Error updating bots:", err);
+        // Não retorna erro aqui pois a chave já foi atualizada
       }
 
       res.json({ success: true });
     } catch (err) {
       console.error("Error updating system API key:", err);
-      res.status(500).json({ error: "Failed to update system API key" });
+      res.status(500).json({ 
+        error: "Erro ao atualizar a chave API do sistema",
+        details: err instanceof Error ? err.message : "Erro desconhecido"
+      });
     }
   });
 

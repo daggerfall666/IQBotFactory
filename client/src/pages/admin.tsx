@@ -20,7 +20,13 @@ export default function AdminPage() {
 
     setIsLoading(true);
     try {
-      await apiRequest("POST", "/api/admin/system-key", { key: systemApiKey });
+      const response = await apiRequest("POST", "/api/admin/system-key", { key: systemApiKey });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details || data.error || "Erro desconhecido");
+      }
+
       toast({
         title: "Sucesso",
         description: "Chave API do sistema atualizada com sucesso"
@@ -29,7 +35,7 @@ export default function AdminPage() {
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.details || "Não foi possível salvar a chave API",
+        description: error.message || "Não foi possível salvar a chave API",
         variant: "destructive"
       });
       setSystemApiKey(""); // Limpa apenas em caso de erro
