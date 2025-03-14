@@ -11,6 +11,24 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
+async function validateAnthropicKey(apiKey: string): Promise<boolean> {
+  try {
+    const anthropic = new Anthropic({ apiKey });
+
+    // Tenta fazer uma chamada simples para validar a chave
+    await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      max_tokens: 10,
+      messages: [{ role: "user", content: "test" }]
+    });
+
+    return true;
+  } catch (err) {
+    console.error("Error validating API key:", err);
+    return false;
+  }
+}
+
 async function getAnthropicClient(apiKey?: string | null) {
   // Se apiKey for undefined ou null, usa a chave do sistema
   const key = apiKey ?? process.env.ANTHROPIC_API_KEY;
@@ -178,6 +196,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      // Valida a chave antes de salvar
+      const isValid = await validateAnthropicKey(key);
+      if (!isValid) {
+        res.status(400).json({ error: "Invalid API key. Please check if the key is correct and try again." });
+        return;
+      }
+
       // Atualiza a variável de ambiente
       process.env.ANTHROPIC_API_KEY = key;
 
@@ -186,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const bots = await storage.listChatbots();
         for (const bot of bots) {
           if (bot.apiKey === null) {
-            await storage.updateChatbot(bot.id, { apiKey: key }); // Corrected to use the new key
+            await storage.updateChatbot(bot.id, { apiKey: key });
           }
         }
       } catch (err) {
