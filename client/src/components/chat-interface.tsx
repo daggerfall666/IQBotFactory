@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { sendMessage } from "@/lib/anthropic";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Chatbot } from "@shared/schema";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
   role: "user" | "assistant";
@@ -19,6 +21,11 @@ interface ChatInterfaceProps {
   className?: string;
 }
 
+const messageVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0 },
+};
+
 export function ChatInterface({ botId, className }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -26,19 +33,16 @@ export function ChatInterface({ botId, className }: ChatInterfaceProps) {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Fetch bot settings to get initial message
   const { data: bot } = useQuery<Chatbot>({
     queryKey: [`/api/chatbots/${botId}`],
   });
 
-  // Set initial message when bot data is loaded
   useEffect(() => {
     if (bot?.settings.initialMessage) {
       setMessages([{ role: "assistant", content: bot.settings.initialMessage }]);
     }
   }, [bot]);
 
-  // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
@@ -76,28 +80,58 @@ export function ChatInterface({ botId, className }: ChatInterfaceProps) {
   }
 
   return (
-    <Card className={className}>
+    <Card className={`${className} backdrop-blur-sm bg-background/95`}>
       <CardContent className="p-4 flex flex-col h-[500px]">
         <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
           <div className="space-y-4">
-            {messages.map((message, i) => (
-              <div
-                key={i}
-                className={`flex ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`rounded-lg px-4 py-2 max-w-[80%] ${
-                    message.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
+            <AnimatePresence initial={false}>
+              {messages.map((message, i) => (
+                <motion.div
+                  key={i}
+                  variants={messageVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className={`flex items-start gap-3 ${
+                    message.role === "user" ? "flex-row-reverse" : "flex-row"
                   }`}
                 >
-                  {message.content}
-                </div>
-              </div>
-            ))}
+                  <Avatar className={`${message.role === "assistant" ? "bg-primary/10" : "bg-muted"}`}>
+                    {message.role === "assistant" ? (
+                      <>
+                        <AvatarImage src={bot?.settings.theme.avatarUrl} />
+                        <AvatarFallback>{bot?.name[0]?.toUpperCase() || "A"}</AvatarFallback>
+                      </>
+                    ) : (
+                      <AvatarFallback>U</AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div
+                    className={`rounded-lg px-4 py-2 max-w-[80%] relative ${
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted"
+                    }`}
+                    style={{
+                      borderRadius: bot?.settings.theme.chatBubbleStyle === "modern" 
+                        ? "1rem" 
+                        : "0.5rem",
+                    }}
+                  >
+                    <div className="whitespace-pre-wrap break-words">{message.content}</div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            {isLoading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center gap-2 text-muted-foreground"
+              >
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Digitando...</span>
+              </motion.div>
+            )}
           </div>
         </ScrollArea>
 
@@ -107,9 +141,19 @@ export function ChatInterface({ botId, className }: ChatInterfaceProps) {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Digite uma mensagem..."
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
+            className="shadow-sm"
           />
-          <Button onClick={handleSend} disabled={isLoading}>
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar"}
+          <Button 
+            onClick={handleSend} 
+            disabled={isLoading}
+            size="icon"
+            className="shadow-sm"
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </CardContent>

@@ -47,6 +47,15 @@ export const chatbots = pgTable("chatbots", {
       borderRadius: number;
       chatBubbleStyle: "modern" | "classic";
       darkMode: boolean;
+      avatarUrl?: string;
+      avatarBackgroundColor?: string;
+      botName?: string;
+      customMessageStyles?: {
+        userBackground?: string;
+        botBackground?: string;
+        userText?: string;
+        botText?: string;
+      };
     };
   }>().notNull(),
   wordpressConfig: jsonb("wordpress_config").$type<{

@@ -44,6 +44,7 @@ import { Settings2, MessageSquare, Brush, Code, Wand2, Sparkles } from "lucide-r
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"; // Assuming these are available
 
 interface BotConfigFormProps {
   bot: Chatbot;
@@ -218,9 +219,9 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                       </div>
                       {field.value !== null && (
                         <FormControl>
-                          <Input 
-                            type="password" 
-                            {...field} 
+                          <Input
+                            type="password"
+                            {...field}
                             placeholder="sk-ant-..."
                             className="font-mono"
                           />
@@ -281,8 +282,8 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                       <FormLabel>Prompt do Sistema</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Textarea 
-                            {...field} 
+                          <Textarea
+                            {...field}
                             className="min-h-[100px] pr-20"
                             placeholder="Você é um assistente útil que..."
                           />
@@ -312,7 +313,7 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                                     onChange={(e) => setMission(e.target.value)}
                                     className="min-h-[100px]"
                                   />
-                                  <Button 
+                                  <Button
                                     onClick={handleGeneratePrompt}
                                     disabled={isGenerating || !mission.trim()}
                                     className="w-full"
@@ -410,6 +411,63 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
               <CardContent className="space-y-6">
                 <FormField
                   control={form.control}
+                  name="settings.theme.avatarUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>URL do Avatar</FormLabel>
+                      <FormControl>
+                        <div className="flex gap-4 items-center">
+                          <Input {...field} placeholder="https://example.com/avatar.png" />
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={field.value} />
+                            <AvatarFallback>{bot.name[0]?.toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        URL da imagem do avatar do chatbot (opcional)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="settings.theme.avatarBackgroundColor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cor de Fundo do Avatar</FormLabel>
+                      <FormControl>
+                        <div className="flex gap-2">
+                          <Input {...field} type="color" className="w-24" />
+                          <Input {...field} placeholder="#000000" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="settings.theme.botName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome Exibido</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Assistente" />
+                      </FormControl>
+                      <FormDescription>
+                        Nome que será exibido nas mensagens do bot
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="settings.theme.primaryColor"
                   render={({ field }) => (
                     <FormItem>
@@ -451,6 +509,98 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
 
                 <FormField
                   control={form.control}
+                  name="settings.theme.chatBubbleStyle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estilo das Mensagens</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um estilo" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="modern">Moderno</SelectItem>
+                          <SelectItem value="classic">Clássico</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="settings.theme.customMessageStyles"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cores Personalizadas das Mensagens</FormLabel>
+                      <FormControl>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Fundo (Usuário)</label>
+                            <Input
+                              type="color"
+                              value={field.value?.userBackground || "#000000"}
+                              onChange={(e) =>
+                                field.onChange({
+                                  ...field.value,
+                                  userBackground: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Fundo (Bot)</label>
+                            <Input
+                              type="color"
+                              value={field.value?.botBackground || "#000000"}
+                              onChange={(e) =>
+                                field.onChange({
+                                  ...field.value,
+                                  botBackground: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Texto (Usuário)</label>
+                            <Input
+                              type="color"
+                              value={field.value?.userText || "#000000"}
+                              onChange={(e) =>
+                                field.onChange({
+                                  ...field.value,
+                                  userText: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Texto (Bot)</label>
+                            <Input
+                              type="color"
+                              value={field.value?.botText || "#000000"}
+                              onChange={(e) =>
+                                field.onChange({
+                                  ...field.value,
+                                  botText: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        Personalize as cores de fundo e texto das mensagens
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="settings.theme.darkMode"
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between">
@@ -466,28 +616,6 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                           onCheckedChange={field.onChange}
                         />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="settings.theme.chatBubbleStyle"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold tracking-tight">Estilo das Mensagens</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} className="w-full">
-                        <FormControl>
-                          <SelectTrigger className="h-9 bg-background/50 shadow-sm">
-                            <SelectValue placeholder="Selecione um estilo" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="modern">Moderno</SelectItem>
-                          <SelectItem value="classic">Clássico</SelectItem>
-                        </SelectContent>
-                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
