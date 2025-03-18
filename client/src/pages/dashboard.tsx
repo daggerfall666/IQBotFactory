@@ -4,6 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, MessageSquare, Check, Clock, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from "recharts";
 
 interface Analytics {
   totalInteractions: number;
@@ -25,8 +34,8 @@ export default function Dashboard() {
     onError: (err) => {
       console.error("Error fetching analytics:", err);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar as estatísticas",
+        title: "Error",
+        description: "Could not load statistics",
         variant: "destructive"
       });
     }
@@ -42,11 +51,11 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="responsive-container flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <p className="text-destructive mb-4">Erro ao carregar estatísticas</p>
+          <p className="text-destructive mb-4">Error loading statistics</p>
           <Button variant="outline" onClick={() => window.location.reload()}>
-            Tentar novamente
+            Try again
           </Button>
         </div>
       </div>
@@ -55,8 +64,8 @@ export default function Dashboard() {
 
   if (isLoading || !analytics) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Carregando estatísticas...</p>
+      <div className="responsive-container flex items-center justify-center min-h-[60vh]">
+        <p className="text-muted-foreground">Loading statistics...</p>
       </div>
     );
   }
@@ -64,71 +73,72 @@ export default function Dashboard() {
   const successRate = (analytics.successfulInteractions / analytics.totalInteractions) * 100 || 0;
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center gap-4 mb-8">
+    <div className="responsive-container py-8">
+      <div className="adaptive-flex mb-8">
         <Button variant="ghost" onClick={() => navigate(`/bot/${id}`)}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar para Configurações
+          <ArrowLeft className="button-icon" />
+          Back to Settings
         </Button>
-        <h1 className="text-4xl font-bold">Dashboard - {bot?.name}</h1>
+        <h1 className="text-3xl font-bold">Dashboard - {bot?.name}</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card>
+      <div className="stats-grid mb-8">
+        <Card className="adaptive-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Interações</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Interactions</CardTitle>
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{analytics.totalInteractions}</div>
             <p className="text-xs text-muted-foreground">
-              Mensagens trocadas com usuários
+              Messages exchanged with users
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="adaptive-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Sucesso</CardTitle>
+            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
             <Check className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{successRate.toFixed(1)}%</div>
             <p className="text-xs text-muted-foreground">
-              Interações bem-sucedidas
+              Successful interactions
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="adaptive-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tempo Médio</CardTitle>
+            <CardTitle className="text-sm font-medium">Average Time</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{analytics.averageResponseTime}ms</div>
             <p className="text-xs text-muted-foreground">
-              Tempo médio de resposta
+              Average response time
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="adaptive-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tokens Usados</CardTitle>
+            <CardTitle className="text-sm font-medium">Tokens Used</CardTitle>
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{analytics.totalTokensUsed}</div>
             <p className="text-xs text-muted-foreground">
-              Total de tokens consumidos
+              Total tokens consumed
             </p>
           </CardContent>
         </Card>
       </div>
-      <Card className="col-span-4">
+
+      <Card className="adaptive-card">
         <CardHeader>
-          <CardTitle>Uso Diário</CardTitle>
+          <CardTitle>Daily Usage</CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="h-[350px]">
@@ -143,7 +153,7 @@ export default function Dashboard() {
                     bottom: 0,
                   }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis
                     dataKey="date"
                     stroke="#888888"
@@ -170,7 +180,7 @@ export default function Dashboard() {
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">Nenhum dado disponível</p>
+                <p className="text-muted-foreground">No data available</p>
               </div>
             )}
           </div>
