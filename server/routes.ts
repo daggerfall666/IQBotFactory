@@ -142,27 +142,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const { message } = req.body;
-      if (!message || typeof message !== 'string' || message.length > 2000) {
-        logger.warn("Invalid chat message", {
-          messageLength: message?.length,
-          messageType: typeof message
+
+      // Enhanced input validation
+      if (!req.body || typeof req.body !== 'object') {
+        logger.warn("Invalid request body", { body: req.body });
+        return res.status(400).json({ 
+          error: "Invalid request format",
+          details: "Request body must be a JSON object"
         });
-        res.status(400).json({ error: "Invalid message format or length" });
-        return;
+      }
+
+      if (!message) {
+        logger.warn("Missing message in request", { body: req.body });
+        return res.status(400).json({ 
+          error: "Missing message",
+          details: "Message field is required"
+        });
+      }
+
+      if (typeof message !== 'string') {
+        logger.warn("Invalid message type", { 
+          messageType: typeof message,
+          receivedValue: message 
+        });
+        return res.status(400).json({ 
+          error: "Invalid message format",
+          details: "Message must be a string"
+        });
+      }
+
+      if (message.length > 2000 || message.length === 0) {
+        logger.warn("Invalid message length", { messageLength: message.length });
+        return res.status(400).json({ 
+          error: "Invalid message length",
+          details: "Message must be between 1 and 2000 characters"
+        });
       }
 
       const botId = parseInt(req.params.botId);
       if (isNaN(botId)) {
-        logger.warn("Invalid bot ID", { botId: req.params.botId });
-        res.status(400).json({ error: "Invalid bot ID" });
-        return;
+        logger.warn("Invalid bot ID", { 
+          botId: req.params.botId,
+          type: typeof req.params.botId 
+        });
+        return res.status(400).json({ 
+          error: "Invalid bot ID",
+          details: "Bot ID must be a valid number"
+        });
       }
 
       const bot = await storage.getChatbot(botId);
       if (!bot) {
         logger.warn("Chatbot not found", { botId });
-        res.status(404).json({ error: "Chatbot not found" });
-        return;
+        return res.status(404).json({ 
+          error: "Chatbot not found",
+          details: "No chatbot exists with the provided ID"
+        });
       }
 
       const kb = await storage.listKnowledgeBase(botId);
@@ -195,9 +230,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const endTime = performance.now();
         const responseTime = endTime - startTime;
 
-        const botResponse = response.content[0].type === 'text' 
-          ? response.content[0].text 
-          : 'Error: Unexpected response format';
+        if (!response.content || !response.content[0]) {
+          throw new Error("Empty response from AI service");
+        }
+
+        const content = response.content[0];
+        if (content.type !== 'text') {
+          throw new Error(`Unexpected response type: ${content.type}`);
+        }
+
+        const botResponse = content.text;
 
         logger.info("Chat interaction completed", {
           botId,
@@ -207,7 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         // Register the interaction
-        const chatInteraction = await db.insert(chatInteractions).values({
+        await db.insert(chatInteractions).values({
           botId,
           userMessage: message,
           botResponse,
@@ -216,9 +258,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           responseTime,
           success: true,
           timestamp: new Date()
-        }).returning();
+        });
 
-        res.json({ response: botResponse });
+        return res.json({ response: botResponse });
       } catch (err) {
         logger.error("Chat AI service error", err as Error, {
           botId,
@@ -238,12 +280,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         if (err instanceof Anthropic.APIError) {
-          res.status(err.status || 500).json({
+          return res.status(err.status || 500).json({
             error: "AI Service Error",
             details: "Invalid or missing API key. Please check the configuration."
           });
         } else {
-          res.status(500).json({ 
+          return res.status(500).json({ 
             error: "Error processing message",
             details: err instanceof Error ? err.message : "Unknown error"
           });
@@ -251,7 +293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (err) {
       logger.error("Unhandled chat error", err as Error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         error: "Error processing message",
         details: err instanceof Error ? err.message : "Unknown error"
       });
