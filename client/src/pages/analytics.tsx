@@ -27,6 +27,8 @@ import {
   SystemResourcesSkeleton
 } from "@/components/skeletons/analytics-skeleton";
 import { useWebSocketMetrics } from "@/hooks/use-websocket-metrics";
+import { CustomTooltip } from "@/components/custom-tooltip";
+import { motion } from "framer-motion";
 
 interface SystemHealth {
   totalRequests: number;
@@ -45,6 +47,33 @@ interface ChatbotWithStats extends Chatbot {
     averageResponseTime: number;
   };
 }
+
+const StatCard = ({ title, value, subtitle, icon: Icon }: {
+  title: string;
+  value: string | number;
+  subtitle: string;
+  icon: React.ComponentType<any>;
+}) => (
+  <motion.div
+    whileHover={{ scale: 1.02 }}
+    transition={{ type: "spring", stiffness: 300 }}
+  >
+    <Card className="transition-shadow hover:shadow-lg">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Icon className="h-4 w-4 text-primary" />
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+        <p className="text-xs text-muted-foreground">
+          {subtitle}
+        </p>
+      </CardContent>
+    </Card>
+  </motion.div>
+);
 
 export default function Analytics() {
   const { data: chatbots = [], isLoading: isLoadingBots } = useQuery<ChatbotWithStats[]>({
@@ -99,73 +128,34 @@ export default function Analytics() {
             </>
           ) : (
             <>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Bot className="h-4 w-4 text-primary" />
-                    Active Chatbots
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{chatbots.length}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Total deployed assistants
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4 text-primary" />
-                    Total Interactions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{totalInteractions}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Messages processed
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-primary" />
-                    System Health
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {systemHealth && systemHealth.errorRate !== undefined
-                      ? `${(100 - systemHealth.errorRate).toFixed(1)}%`
-                      : "N/A"}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    System reliability
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-primary" />
-                    Response Time
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {systemHealth?.averageResponseTime
-                      ? `${Math.round(systemHealth.averageResponseTime)}ms`
-                      : "N/A"}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Average response time
-                  </p>
-                </CardContent>
-              </Card>
+              <StatCard
+                title="Active Chatbots"
+                value={chatbots.length}
+                subtitle="Total deployed assistants"
+                icon={Bot}
+              />
+              <StatCard
+                title="Total Interactions"
+                value={totalInteractions}
+                subtitle="Messages processed"
+                icon={MessageSquare}
+              />
+              <StatCard
+                title="System Health"
+                value={systemHealth && systemHealth.errorRate !== undefined
+                  ? `${(100 - systemHealth.errorRate).toFixed(1)}%`
+                  : "N/A"}
+                subtitle="System reliability"
+                icon={Activity}
+              />
+              <StatCard
+                title="Response Time"
+                value={systemHealth?.averageResponseTime
+                  ? `${Math.round(systemHealth.averageResponseTime)}ms`
+                  : "N/A"}
+                subtitle="Average response time"
+                icon={Clock}
+              />
             </>
           )}
         </div>
@@ -178,82 +168,48 @@ export default function Analytics() {
             </>
           ) : (
             <>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Chatbot Usage</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[350px]">
-                    {botPerformanceData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={botPerformanceData}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                          <XAxis dataKey="name" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Bar
-                            dataKey="interactions"
-                            name="Total Interactions"
-                            fill="hsl(var(--primary))"
-                          />
-                          <Bar
-                            dataKey="successRate"
-                            name="Success Rate (%)"
-                            fill="hsl(var(--primary)/0.5)"
-                          />
-                          <Bar
-                            dataKey="responseTime"
-                            name="Avg Response Time (ms)"
-                            fill="hsl(var(--primary)/0.75)"
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <p className="text-muted-foreground">No data available</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {isLoadingHealth ? (
-                <SystemResourcesSkeleton />
-              ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
                 <Card>
                   <CardHeader>
-                    <CardTitle>System Performance</CardTitle>
+                    <CardTitle>Chatbot Usage</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="h-[350px]">
-                      {systemHealth ? (
-                        <div className="grid grid-cols-2 gap-4 h-full place-content-center">
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium">CPU Usage</p>
-                            <div className="text-2xl font-bold">
-                              {systemHealth.cpuUsage.toFixed(1)}%
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium">Memory</p>
-                            <div className="text-2xl font-bold">
-                              {Math.round(systemHealth.memoryUsage / 1024 / 1024)} MB
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium">Uptime</p>
-                            <div className="text-2xl font-bold">
-                              {Math.floor(systemHealth.uptime / 3600)}h {Math.floor((systemHealth.uptime % 3600) / 60)}m
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium">Error Rate</p>
-                            <div className="text-2xl font-bold">
-                              {systemHealth.errorRate.toFixed(1)}%
-                            </div>
-                          </div>
-                        </div>
+                      {botPerformanceData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={botPerformanceData}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                            <XAxis dataKey="name" />
+                            <YAxis />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Legend />
+                            <Bar
+                              dataKey="interactions"
+                              name="Total Interactions"
+                              fill="hsl(var(--primary))"
+                              radius={[4, 4, 0, 0]}
+                              cursor="pointer"
+                            />
+                            <Bar
+                              dataKey="successRate"
+                              name="Success Rate (%)"
+                              fill="hsl(var(--primary)/0.5)"
+                              radius={[4, 4, 0, 0]}
+                              cursor="pointer"
+                            />
+                            <Bar
+                              dataKey="responseTime"
+                              name="Avg Response Time (ms)"
+                              fill="hsl(var(--primary)/0.75)"
+                              radius={[4, 4, 0, 0]}
+                              cursor="pointer"
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
                       ) : (
                         <div className="flex items-center justify-center h-full">
                           <p className="text-muted-foreground">No data available</p>
@@ -262,6 +218,64 @@ export default function Analytics() {
                     </div>
                   </CardContent>
                 </Card>
+              </motion.div>
+
+              {isLoadingHealth ? (
+                <SystemResourcesSkeleton />
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                >
+                  <Card className="transition-all hover:shadow-lg">
+                    <CardHeader>
+                      <CardTitle>System Performance</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-[350px]">
+                        {systemHealth ? (
+                          <div className="grid grid-cols-2 gap-4 h-full place-content-center">
+                            {[
+                              {
+                                label: "CPU Usage",
+                                value: `${systemHealth.cpuUsage.toFixed(1)}%`,
+                              },
+                              {
+                                label: "Memory",
+                                value: `${Math.round(systemHealth.memoryUsage / 1024 / 1024)} MB`,
+                              },
+                              {
+                                label: "Uptime",
+                                value: `${Math.floor(systemHealth.uptime / 3600)}h ${Math.floor((systemHealth.uptime % 3600) / 60)}m`,
+                              },
+                              {
+                                label: "Error Rate",
+                                value: `${systemHealth.errorRate.toFixed(1)}%`,
+                              },
+                            ].map((item, index) => (
+                              <motion.div
+                                key={item.label}
+                                className="space-y-2"
+                                whileHover={{ scale: 1.05 }}
+                                transition={{ type: "spring", stiffness: 300 }}
+                              >
+                                <p className="text-sm font-medium">{item.label}</p>
+                                <div className="text-2xl font-bold">
+                                  {item.value}
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center h-full">
+                            <p className="text-muted-foreground">No data available</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               )}
             </>
           )}
