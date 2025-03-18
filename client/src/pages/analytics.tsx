@@ -11,8 +11,6 @@ import {
 } from "lucide-react";
 import { 
   ResponsiveContainer, 
-  LineChart, 
-  Line, 
   BarChart,
   Bar,
   XAxis, 
@@ -22,6 +20,7 @@ import {
   Legend 
 } from "recharts";
 import type { Chatbot } from "@shared/schema";
+import { LoadingAnimation } from "@/components/loading-animation";
 
 interface SystemHealth {
   totalRequests: number;
@@ -56,9 +55,16 @@ export default function Analytics() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center min-h-[60vh] flex-col gap-4">
-          <BarChart3 className="h-16 w-16 animate-bounce text-primary/60" />
-          <p className="text-muted-foreground">Loading analytics...</p>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <LoadingAnimation 
+            message={
+              isLoadingBots && isLoadingHealth
+                ? "Loading analytics dashboard..."
+                : isLoadingBots
+                ? "Fetching chatbot statistics..."
+                : "Loading system health metrics..."
+            } 
+          />
         </div>
       </Layout>
     );
