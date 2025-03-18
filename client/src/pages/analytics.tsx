@@ -1,31 +1,32 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Layout } from "@/components/layout";
-import { 
-  BarChart3, 
-  MessageSquare, 
-  Check, 
-  Clock, 
+import {
+  BarChart3,
+  MessageSquare,
+  Check,
+  Clock,
   Activity,
   Bot
 } from "lucide-react";
-import { 
-  ResponsiveContainer, 
+import {
+  ResponsiveContainer,
   BarChart,
   Bar,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
-  Legend 
+  Legend
 } from "recharts";
 import type { Chatbot } from "@shared/schema";
 import { LoadingAnimation } from "@/components/loading-animation";
-import { 
-  StatCardSkeleton, 
-  ChartSkeleton, 
-  SystemResourcesSkeleton 
+import {
+  StatCardSkeleton,
+  ChartSkeleton,
+  SystemResourcesSkeleton
 } from "@/components/skeletons/analytics-skeleton";
+import { useWebSocketMetrics } from "@/hooks/use-websocket-metrics";
 
 interface SystemHealth {
   totalRequests: number;
@@ -50,14 +51,11 @@ export default function Analytics() {
     queryKey: ["/api/chatbots"],
   });
 
-  const { data: systemHealth, isLoading: isLoadingHealth } = useQuery<SystemHealth>({
-    queryKey: ["/api/system/health"],
-    refetchInterval: 30000,
-  });
+  const { metrics: systemHealth, error: wsError } = useWebSocketMetrics();
+  const isLoadingHealth = !systemHealth && !wsError;
 
   const isInitialLoading = isLoadingBots && isLoadingHealth;
 
-  // Show initial loading animation
   if (isInitialLoading) {
     return (
       <Layout>
@@ -68,12 +66,10 @@ export default function Analytics() {
     );
   }
 
-  // Calculate total interactions
   const totalInteractions = chatbots.reduce((acc, bot) => {
     return acc + (bot.analytics?.totalInteractions || 0);
   }, 0);
 
-  // Prepare data for charts
   const botPerformanceData = chatbots.map(bot => ({
     name: bot.name,
     interactions: bot.analytics?.totalInteractions || 0,

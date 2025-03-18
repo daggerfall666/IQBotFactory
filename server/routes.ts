@@ -11,6 +11,7 @@ import { apiLimiter, chatLimiter, adminLimiter, uploadLimiter } from './middlewa
 import { performance } from 'perf_hooks';
 import os from 'os';
 import { logger } from './utils/logger';
+import { WebSocketServer, WebSocket } from 'ws';
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -773,5 +774,72 @@ Return only the improved prompt without any explanations or metadata.`
   });
 
   const httpServer = createServer(app);
+
+  // Create WebSocket server
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+
+  // Track connected clients
+  const clients = new Set<WebSocket>();
+
+  // Send system health metrics to all connected clients
+  const broadcastMetrics = async () => {
+    try {
+      const startTime = new Date();
+      startTime.setHours(startTime.getHours() - 1);
+
+      const apiMetrics = await db
+        .select({
+          total: sql`COUNT(*)`,
+          errors: sql`COUNT(CASE WHEN success = false THEN 1 END)`,
+          avgResponseTime: sql`AVG(response_time)`,
+        })
+        .from(chatInteractions)
+        .where(sql`timestamp >= ${startTime}`);
+
+      const metrics = {
+        totalRequests: apiMetrics[0].total || 0,
+        errorRate: apiMetrics[0].total > 0 ? (apiMetrics[0].errors / apiMetrics[0].total * 100) : 0,
+        averageResponseTime: apiMetrics[0].avgResponseTime || 0,
+        activeUsers: 0,
+        cpuUsage: os.loadavg()[0],
+        memoryUsage: process.memoryUsage().heapUsed,
+        uptime: process.uptime()
+      };
+
+      const message = JSON.stringify({ type: 'metrics', data: metrics });
+
+      // Send to all connected clients
+      clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(message);
+        }
+      });
+    } catch (err) {
+      logger.error('Error broadcasting metrics:', err);
+    }
+  };
+
+  // Handle WebSocket connections
+  wss.on('connection', (ws) => {
+    logger.info('New WebSocket connection established');
+    clients.add(ws);
+
+    // Send initial metrics
+    broadcastMetrics();
+
+    ws.on('close', () => {
+      logger.info('WebSocket connection closed');
+      clients.delete(ws);
+    });
+
+    ws.on('error', (err) => {
+      logger.error('WebSocket error:', err);
+      clients.delete(ws);
+    });
+  });
+
+  // Broadcast metrics every 5 seconds
+  setInterval(broadcastMetrics, 5000);
+
   return httpServer;
 }
