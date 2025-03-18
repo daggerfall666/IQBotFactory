@@ -49,14 +49,16 @@ interface BotWithAnalytics extends Chatbot {
 }
 
 export default function Analytics() {
-  const { data: chatbots = [] } = useQuery<BotWithAnalytics[]>({
+  const { data: chatbots = [], isLoading: isLoadingBots } = useQuery<BotWithAnalytics[]>({
     queryKey: ["/api/chatbots"],
   });
 
-  const { data: systemHealth, isLoading } = useQuery<SystemAnalytics>({
+  const { data: systemHealth, isLoading: isLoadingHealth } = useQuery<SystemAnalytics>({
     queryKey: ["/api/system/health"],
     refetchInterval: 30000,
   });
+
+  const isLoading = isLoadingBots || isLoadingHealth;
 
   // Calculate total interactions across all chatbots
   const totalInteractions = chatbots.reduce((acc, bot) => {
@@ -74,11 +76,9 @@ export default function Analytics() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="responsive-container flex items-center justify-center min-h-[60vh]">
-          <div className="text-center space-y-4">
-            <BarChart3 className="h-16 w-16 animate-bounce text-primary/60" />
-            <p className="text-muted-foreground">Loading analytics...</p>
-          </div>
+        <div className="flex items-center justify-center min-h-[60vh] flex-col gap-4">
+          <BarChart3 className="h-16 w-16 animate-bounce text-primary/60" />
+          <p className="text-muted-foreground">Loading analytics...</p>
         </div>
       </Layout>
     );
@@ -86,7 +86,7 @@ export default function Analytics() {
 
   return (
     <Layout>
-      <div className="responsive-container py-8 space-y-8">
+      <div className="container mx-auto px-4 py-8 space-y-8">
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
             Analytics Overview
@@ -97,8 +97,8 @@ export default function Analytics() {
         </div>
 
         {/* System Health Section */}
-        <div className="stats-grid">
-          <Card className="adaptive-card">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Bot className="h-4 w-4 text-primary" />
@@ -113,7 +113,7 @@ export default function Analytics() {
             </CardContent>
           </Card>
 
-          <Card className="adaptive-card">
+          <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-primary" />
@@ -128,7 +128,7 @@ export default function Analytics() {
             </CardContent>
           </Card>
 
-          <Card className="adaptive-card">
+          <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Activity className="h-4 w-4 text-primary" />
@@ -147,7 +147,7 @@ export default function Analytics() {
             </CardContent>
           </Card>
 
-          <Card className="adaptive-card">
+          <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Clock className="h-4 w-4 text-primary" />
@@ -169,7 +169,7 @@ export default function Analytics() {
 
         {/* Performance Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="adaptive-card">
+          <Card>
             <CardHeader>
               <CardTitle>Chatbot Performance</CardTitle>
             </CardHeader>
@@ -204,7 +204,7 @@ export default function Analytics() {
             </CardContent>
           </Card>
 
-          <Card className="adaptive-card">
+          <Card>
             <CardHeader>
               <CardTitle>Response Times</CardTitle>
             </CardHeader>
@@ -239,7 +239,7 @@ export default function Analytics() {
 
         {/* System Resources */}
         {systemHealth && (
-          <Card className="adaptive-card">
+          <Card>
             <CardHeader>
               <CardTitle>System Resources</CardTitle>
             </CardHeader>
