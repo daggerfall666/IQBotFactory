@@ -21,6 +21,11 @@ import {
 } from "recharts";
 import type { Chatbot } from "@shared/schema";
 import { LoadingAnimation } from "@/components/loading-animation";
+import { 
+  StatCardSkeleton, 
+  ChartSkeleton, 
+  SystemResourcesSkeleton 
+} from "@/components/skeletons/analytics-skeleton";
 
 interface SystemHealth {
   totalRequests: number;
@@ -50,21 +55,14 @@ export default function Analytics() {
     refetchInterval: 30000,
   });
 
-  const isLoading = isLoadingBots || isLoadingHealth;
+  const isInitialLoading = isLoadingBots && isLoadingHealth;
 
-  if (isLoading) {
+  // Show initial loading animation
+  if (isInitialLoading) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <LoadingAnimation 
-            message={
-              isLoadingBots && isLoadingHealth
-                ? "Loading analytics dashboard..."
-                : isLoadingBots
-                ? "Fetching chatbot statistics..."
-                : "Loading system health metrics..."
-            } 
-          />
+          <LoadingAnimation message="Loading analytics dashboard..." />
         </div>
       </Layout>
     );
@@ -96,157 +94,181 @@ export default function Analytics() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Bot className="h-4 w-4 text-primary" />
-                Active Chatbots
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{chatbots.length}</div>
-              <p className="text-xs text-muted-foreground">
-                Total deployed assistants
-              </p>
-            </CardContent>
-          </Card>
+          {isLoadingBots ? (
+            <>
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+            </>
+          ) : (
+            <>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Bot className="h-4 w-4 text-primary" />
+                    Active Chatbots
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{chatbots.length}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Total deployed assistants
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-primary" />
-                Total Interactions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalInteractions}</div>
-              <p className="text-xs text-muted-foreground">
-                Messages processed
-              </p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-primary" />
+                    Total Interactions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{totalInteractions}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Messages processed
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Activity className="h-4 w-4 text-primary" />
-                System Health
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {systemHealth && systemHealth.errorRate !== undefined
-                  ? `${(100 - systemHealth.errorRate).toFixed(1)}%`
-                  : "N/A"}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                System reliability
-              </p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-primary" />
+                    System Health
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {systemHealth && systemHealth.errorRate !== undefined
+                      ? `${(100 - systemHealth.errorRate).toFixed(1)}%`
+                      : "N/A"}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    System reliability
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" />
-                Response Time
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {systemHealth?.averageResponseTime
-                  ? `${Math.round(systemHealth.averageResponseTime)}ms`
-                  : "N/A"}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Average response time
-              </p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    Response Time
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {systemHealth?.averageResponseTime
+                      ? `${Math.round(systemHealth.averageResponseTime)}ms`
+                      : "N/A"}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Average response time
+                  </p>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Chatbot Usage</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[350px]">
-                {botPerformanceData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={botPerformanceData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar
-                        dataKey="interactions"
-                        name="Total Interactions"
-                        fill="hsl(var(--primary))"
-                      />
-                      <Bar
-                        dataKey="successRate"
-                        name="Success Rate (%)"
-                        fill="hsl(var(--primary)/0.5)"
-                      />
-                      <Bar
-                        dataKey="responseTime"
-                        name="Avg Response Time (ms)"
-                        fill="hsl(var(--primary)/0.75)"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <p className="text-muted-foreground">No data available</p>
+          {isLoadingBots ? (
+            <>
+              <ChartSkeleton />
+              <SystemResourcesSkeleton />
+            </>
+          ) : (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Chatbot Usage</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[350px]">
+                    {botPerformanceData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={botPerformanceData}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis dataKey="name" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Bar
+                            dataKey="interactions"
+                            name="Total Interactions"
+                            fill="hsl(var(--primary))"
+                          />
+                          <Bar
+                            dataKey="successRate"
+                            name="Success Rate (%)"
+                            fill="hsl(var(--primary)/0.5)"
+                          />
+                          <Bar
+                            dataKey="responseTime"
+                            name="Avg Response Time (ms)"
+                            fill="hsl(var(--primary)/0.75)"
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">No data available</p>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>System Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[350px]">
-                {systemHealth ? (
-                  <div className="grid grid-cols-2 gap-4 h-full place-content-center">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">CPU Usage</p>
-                      <div className="text-2xl font-bold">
-                        {systemHealth.cpuUsage.toFixed(1)}%
-                      </div>
+              {isLoadingHealth ? (
+                <SystemResourcesSkeleton />
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>System Performance</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[350px]">
+                      {systemHealth ? (
+                        <div className="grid grid-cols-2 gap-4 h-full place-content-center">
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">CPU Usage</p>
+                            <div className="text-2xl font-bold">
+                              {systemHealth.cpuUsage.toFixed(1)}%
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Memory</p>
+                            <div className="text-2xl font-bold">
+                              {Math.round(systemHealth.memoryUsage / 1024 / 1024)} MB
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Uptime</p>
+                            <div className="text-2xl font-bold">
+                              {Math.floor(systemHealth.uptime / 3600)}h {Math.floor((systemHealth.uptime % 3600) / 60)}m
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Error Rate</p>
+                            <div className="text-2xl font-bold">
+                              {systemHealth.errorRate.toFixed(1)}%
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <p className="text-muted-foreground">No data available</p>
+                        </div>
+                      )}
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Memory</p>
-                      <div className="text-2xl font-bold">
-                        {Math.round(systemHealth.memoryUsage / 1024 / 1024)} MB
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Uptime</p>
-                      <div className="text-2xl font-bold">
-                        {Math.floor(systemHealth.uptime / 3600)}h {Math.floor((systemHealth.uptime % 3600) / 60)}m
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Error Rate</p>
-                      <div className="text-2xl font-bold">
-                        {systemHealth.errorRate.toFixed(1)}%
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <p className="text-muted-foreground">No data available</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
         </div>
       </div>
     </Layout>
