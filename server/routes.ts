@@ -61,6 +61,10 @@ async function getAnthropicClient(apiKey?: string | null) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Increase payload size limit for JSON and URL-encoded bodies
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
   // Apply general API rate limiting to all /api routes
   app.use('/api', apiLimiter);
 
@@ -107,6 +111,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/chatbots/:id", apiLimiter, async (req, res) => {
     try {
       const validated = insertChatbotSchema.partial().parse(req.body);
+
+      // Validate avatar URL/data if present
+      if (validated.settings?.theme?.avatarUrl) {
+        const avatarUrl = validated.settings.theme.avatarUrl;
+
+        // Check if it's a data URL
+        if (avatarUrl.startsWith('data:image')) {
+          const sizeInBytes = Buffer.from(avatarUrl.split(',')[1], 'base64').length;
+          const maxSizeInBytes = 5 * 1024 * 1024; // 5MB limit
+
+          if (sizeInBytes > maxSizeInBytes) {
+            return res.status(400).json({
+              error: "Image too large",
+              details: "Avatar image must be less than 5MB"
+            });
+          }
+        }
+      }
+
       const chatbot = await storage.updateChatbot(parseInt(req.params.id), validated);
       if (!chatbot) {
         res.status(404).json({ error: "Chatbot not found" });

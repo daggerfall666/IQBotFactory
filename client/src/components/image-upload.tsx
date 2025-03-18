@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload, Image as ImageIcon } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ImageUploadProps {
   onImageSelected: (file: File) => void;
@@ -9,19 +10,81 @@ interface ImageUploadProps {
   className?: string;
 }
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
 export function ImageUpload({ onImageSelected, defaultPreview, className }: ImageUploadProps) {
   const [preview, setPreview] = useState<string>(defaultPreview || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const optimizeImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      img.onload = () => {
+        // Calculate new dimensions while maintaining aspect ratio
+        let width = img.width;
+        let height = img.height;
+        const maxDimension = 800;
+
+        if (width > height && width > maxDimension) {
+          height = (height * maxDimension) / width;
+          width = maxDimension;
+        } else if (height > maxDimension) {
+          width = (width * maxDimension) / height;
+          height = maxDimension;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            }));
+          } else {
+            reject(new Error('Failed to optimize image'));
+          }
+        }, 'image/jpeg', 0.8);
+      };
+
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: "Erro",
+        description: "A imagem deve ter menos de 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const optimizedFile = await optimizeImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
       };
-      reader.readAsDataURL(file);
-      onImageSelected(file);
+      reader.readAsDataURL(optimizedFile);
+      onImageSelected(optimizedFile);
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: "Falha ao processar a imagem",
+        variant: "destructive"
+      });
     }
   };
 
