@@ -16,8 +16,8 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/bot/:id" component={BotConfig} />
-      <Route path="/bot/:id/knowledge" component={KnowledgeBase} />
       <Route path="/bot/:id/dashboard" component={Dashboard} />
+      <Route path="/bot/:id/knowledge" component={KnowledgeBase} />
       <Route path="/admin" component={Admin} />
       <Route path="/prompt-lab" component={PromptLab} />
       <Route path="/health" component={HealthDashboard} />
