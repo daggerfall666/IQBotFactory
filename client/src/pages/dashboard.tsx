@@ -29,7 +29,16 @@ export default function Dashboard() {
 
   const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useQuery<Analytics>({
     queryKey: [`/api/chatbots/${id}/analytics`],
-    refetchInterval: 30000
+    refetchInterval: 30000,
+    retry: 2,
+    onError: (err) => {
+      console.error("Error fetching analytics:", err);
+      toast({
+        title: "Error",
+        description: "Failed to load analytics data. Please try again.",
+        variant: "destructive"
+      });
+    }
   });
 
   const { data: bot, isLoading: botLoading, error: botError } = useQuery({

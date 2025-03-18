@@ -305,7 +305,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const botId = parseInt(req.params.id);
       if (isNaN(botId)) {
-        logger.warn("Invalid bot ID", { botId: req.params.id });
+        logger.warn("Invalid bot ID", { 
+          botId: req.params.id,
+          type: typeof req.params.id 
+        });
         return res.status(400).json({ 
           error: "Invalid bot ID",
           details: "Bot ID must be a valid number" 
