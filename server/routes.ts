@@ -255,7 +255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           botResponse,
           model: bot.settings.model,
           tokensUsed: response.usage?.output_tokens || 0,
-          responseTime,
+          responseTime: Math.round(responseTime),
           success: true,
           timestamp: new Date()
         });
@@ -273,7 +273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           botResponse: "",
           model: bot.settings.model,
           tokensUsed: 0,
-          responseTime: performance.now() - startTime,
+          responseTime: Math.round(performance.now() - startTime),
           success: false,
           errorMessage: err instanceof Error ? err.message : "Unknown error",
           timestamp: new Date()
