@@ -24,33 +24,54 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
       const ctx = canvas.getContext('2d');
 
       img.onload = () => {
-        // Calculate new dimensions while maintaining aspect ratio
-        let width = img.width;
-        let height = img.height;
-        const maxDimension = 800;
+        // Determine size for square crop
+        const size = Math.min(img.width, img.height);
 
-        if (width > height && width > maxDimension) {
-          height = (height * maxDimension) / width;
-          width = maxDimension;
-        } else if (height > maxDimension) {
-          width = (width * maxDimension) / height;
-          height = maxDimension;
+        // Set canvas to final dimensions (we'll use 400x400 for high quality avatars)
+        const finalSize = 400;
+        canvas.width = finalSize;
+        canvas.height = finalSize;
+
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
         }
 
-        canvas.width = width;
-        canvas.height = height;
-        ctx?.drawImage(img, 0, 0, width, height);
+        // Make canvas transparent initially
+        ctx.clearRect(0, 0, finalSize, finalSize);
+
+        // Create circular clipping path
+        ctx.beginPath();
+        ctx.arc(finalSize / 2, finalSize / 2, finalSize / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+
+        // Calculate source and destination coordinates for centered crop
+        const sourceX = (img.width - size) / 2;
+        const sourceY = (img.height - size) / 2;
+
+        // Draw image with proper centering
+        ctx.drawImage(
+          img,
+          sourceX, sourceY, size, size, // Source rectangle
+          0, 0, finalSize, finalSize    // Destination rectangle
+        );
+
+        // Determine output format based on input
+        const isPNG = file.type === 'image/png';
+        const outputFormat = isPNG ? 'image/png' : 'image/jpeg';
+        const quality = isPNG ? undefined : 0.9;
 
         canvas.toBlob((blob) => {
           if (blob) {
-            resolve(new File([blob], file.name, {
-              type: 'image/jpeg',
+            resolve(new File([blob], file.name.replace(/\.[^/.]+$/, isPNG ? '.png' : '.jpg'), {
+              type: outputFormat,
               lastModified: Date.now(),
             }));
           } else {
-            reject(new Error('Failed to optimize image'));
+            reject(new Error('Failed to create image blob'));
           }
-        }, 'image/jpeg', 0.8);
+        }, outputFormat, quality);
       };
 
       img.onerror = () => reject(new Error('Failed to load image'));
@@ -91,7 +112,7 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
   return (
     <div className={`relative group ${className}`}>
       {preview ? (
-        <div className="relative rounded-lg overflow-hidden aspect-square w-24 h-24 border">
+        <div className="relative rounded-full overflow-hidden aspect-square w-24 h-24 border">
           <img
             src={preview}
             alt="Avatar preview"
@@ -111,7 +132,7 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
       ) : (
         <Button
           variant="outline"
-          className="w-24 h-24 flex flex-col items-center justify-center gap-2"
+          className="w-24 h-24 rounded-full flex flex-col items-center justify-center gap-2"
           onClick={() => fileInputRef.current?.click()}
         >
           <ImageIcon className="h-8 w-8 text-muted-foreground" />
