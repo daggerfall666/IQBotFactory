@@ -44,6 +44,20 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    // Enhanced error logging
+    console.error("Application Error:", {
+      timestamp: new Date().toISOString(),
+      status,
+      message,
+      stack: err.stack,
+      path: _req.path,
+      method: _req.method,
+      query: _req.query,
+      body: _req.body,
+      headers: _req.headers,
+      ip: _req.ip
+    });
+
     res.status(status).json({ message });
     throw err;
   });

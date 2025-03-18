@@ -10,6 +10,7 @@ import { eq, desc, sql } from 'drizzle-orm';
 import { apiLimiter, chatLimiter, adminLimiter, uploadLimiter } from './middleware/rateLimiter';
 import { performance } from 'perf_hooks';
 import os from 'os';
+import { logger } from './utils/logger';
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -19,7 +20,7 @@ const upload = multer({
 async function validateAnthropicKey(apiKey: string): Promise<boolean> {
   try {
     if (!apiKey.startsWith('sk-ant-')) {
-      console.error("Invalid API key format");
+      logger.error("Invalid API key format");
       return false;
     }
 
@@ -33,7 +34,7 @@ async function validateAnthropicKey(apiKey: string): Promise<boolean> {
 
     return true;
   } catch (err) {
-    console.error("Error validating API key:", err);
+    logger.error("Error validating API key:", err);
     return false;
   }
 }
@@ -53,7 +54,7 @@ async function getAnthropicClient(apiKey?: string | null) {
     });
     return anthropic;
   } catch (err) {
-    console.error("Error creating Anthropic client:", err);
+    logger.error("Error creating Anthropic client:", err);
     throw new Error("Failed to initialize AI client");
   }
 }
@@ -72,6 +73,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (err instanceof ZodError) {
         res.status(400).json({ error: err.errors });
       } else {
+        logger.error("Failed to create chatbot", err as Error);
         res.status(500).json({ error: "Failed to create chatbot" });
       }
     }
@@ -82,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const chatbots = await storage.listChatbots();
       res.json(chatbots);
     } catch (err) {
-      console.error("Error listing chatbots:", err);
+      logger.error("Error listing chatbots:", err);
       res.status(500).json({ error: "Failed to list chatbots" });
     }
   });
@@ -96,7 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(chatbot);
     } catch (err) {
-      console.error("Error getting chatbot:", err);
+      logger.error("Error getting chatbot:", err);
       res.status(500).json({ error: "Failed to get chatbot" });
     }
   });
@@ -114,6 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (err instanceof ZodError) {
         res.status(400).json({ error: err.errors });
       } else {
+        logger.error("Failed to update chatbot", err as Error);
         res.status(500).json({ error: "Failed to update chatbot" });
       }
     }
@@ -128,30 +131,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json({ success: true });
     } catch (err) {
+      logger.error("Failed to delete chatbot", err as Error);
       res.status(500).json({ error: "Failed to delete chatbot" });
     }
   });
 
   // Chat endpoint with stricter rate limiting
   app.post("/api/chat/:botId", chatLimiter, async (req, res) => {
+    const startTime = performance.now();
+
     try {
       const { message } = req.body;
       if (!message || typeof message !== 'string' || message.length > 2000) {
-        console.error("Invalid message:", message);
+        logger.warn("Invalid chat message", {
+          messageLength: message?.length,
+          messageType: typeof message
+        });
         res.status(400).json({ error: "Invalid message format or length" });
         return;
       }
 
       const botId = parseInt(req.params.botId);
       if (isNaN(botId)) {
-        console.error("Invalid bot ID:", req.params.botId);
+        logger.warn("Invalid bot ID", { botId: req.params.botId });
         res.status(400).json({ error: "Invalid bot ID" });
         return;
       }
 
       const bot = await storage.getChatbot(botId);
       if (!bot) {
-        console.error("Chatbot not found:", botId);
+        logger.warn("Chatbot not found", { botId });
         res.status(404).json({ error: "Chatbot not found" });
         return;
       }
@@ -159,17 +168,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const kb = await storage.listKnowledgeBase(botId);
       const context = kb.map(entry => entry.content).join("\n\n");
 
-      console.log("Processing chat request:", {
+      logger.info("Processing chat request", {
         botId,
         messageLength: message.length,
-        hasContext: !!context
+        hasContext: !!context,
+        model: bot.settings.model
       });
 
       try {
-        const startTime = Date.now();
         const anthropic = await getAnthropicClient(bot.apiKey);
-
-        console.log("Making API request with model:", bot.settings.model);
 
         const response = await anthropic.messages.create({
           model: bot.settings.model,
@@ -185,21 +192,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ],
         });
 
-        const endTime = Date.now();
+        const endTime = performance.now();
         const responseTime = endTime - startTime;
 
-        // Get the response content safely
         const botResponse = response.content[0].type === 'text' 
           ? response.content[0].text 
           : 'Error: Unexpected response format';
 
-        console.log("Chat interaction stats:", {
+        logger.info("Chat interaction completed", {
+          botId,
           responseTime,
-          tokensUsed: response.usage?.output_tokens || 0,
-          responseLength: botResponse.length
+          tokensUsed: response.usage?.output_tokens,
+          success: true
         });
 
-        // Registrar a interação
+        // Register the interaction
         const chatInteraction = await db.insert(chatInteractions).values({
           botId,
           userMessage: message,
@@ -208,14 +215,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tokensUsed: response.usage?.output_tokens || 0,
           responseTime,
           success: true,
-          timestamp: new Date() 
+          timestamp: new Date()
         }).returning();
-
-        console.log("Saved chat interaction:", chatInteraction);
 
         res.json({ response: botResponse });
       } catch (err) {
-        console.error("Chat error:", err);
+        logger.error("Chat AI service error", err as Error, {
+          botId,
+          model: bot.settings.model
+        });
 
         await db.insert(chatInteractions).values({
           botId,
@@ -223,29 +231,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           botResponse: "",
           model: bot.settings.model,
           tokensUsed: 0,
-          responseTime: 0,
+          responseTime: performance.now() - startTime,
           success: false,
           errorMessage: err instanceof Error ? err.message : "Unknown error",
-          timestamp: new Date() 
+          timestamp: new Date()
         });
 
         if (err instanceof Anthropic.APIError) {
           res.status(err.status || 500).json({
             error: "AI Service Error",
-            details: "Chave API inválida ou inexistente. Por favor, verifique a configuração."
+            details: "Invalid or missing API key. Please check the configuration."
           });
         } else {
           res.status(500).json({ 
-            error: "Erro ao processar mensagem",
-            details: err instanceof Error ? err.message : "Erro desconhecido"
+            error: "Error processing message",
+            details: err instanceof Error ? err.message : "Unknown error"
           });
         }
       }
     } catch (err) {
-      console.error("Chat error:", err);
+      logger.error("Unhandled chat error", err as Error);
       res.status(500).json({ 
-        error: "Erro ao processar mensagem",
-        details: err instanceof Error ? err.message : "Erro desconhecido"
+        error: "Error processing message",
+        details: err instanceof Error ? err.message : "Unknown error"
       });
     }
   });
@@ -255,38 +263,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const botId = parseInt(req.params.botId);
       if (isNaN(botId)) {
-        console.error("Invalid bot ID:", req.params.botId);
+        logger.warn("Invalid bot ID", { botId: req.params.botId });
         res.status(400).json({ error: "Invalid bot ID" });
         return;
       }
 
       const bot = await storage.getChatbot(botId);
       if (!bot) {
-        console.error("Chatbot not found:", botId);
+        logger.warn("Chatbot not found", { botId });
         res.status(404).json({ error: "Chatbot not found" });
         return;
       }
 
-      console.log("Fetching analytics for bot:", botId);
+      logger.info("Fetching analytics for bot", { botId });
 
       try {
         // Log the SQL query being executed
-        console.log("Executing query for chat_interactions");
+        logger.info("Executing query for chat_interactions");
 
         const interactions = await db
           .select()
           .from(chatInteractions)
           .where(eq(chatInteractions.botId, botId))
           .catch(err => {
-            console.error("Database query error:", err);
+            logger.error("Database query error:", err);
             throw new Error("Failed to fetch chat interactions");
           });
 
-        console.log("Raw interactions data:", interactions);
+        logger.debug("Raw interactions data:", interactions);
 
         // Return empty statistics if no interactions found
         if (!interactions || interactions.length === 0) {
-          console.log("No interactions found for bot:", botId);
+          logger.info("No interactions found for bot", { botId });
           return res.json({
             totalInteractions: 0,
             successfulInteractions: 0,
@@ -323,7 +331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               acc[date] = (acc[date] || 0) + 1;
             }
           } catch (err) {
-            console.error("Error processing interaction date:", err);
+            logger.error("Error processing interaction date:", err);
           }
           return acc;
         }, {} as Record<string, number>);
@@ -341,14 +349,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }))
         };
 
-        console.log("Final analytics response:", response);
+        logger.info("Final analytics response:", response);
         res.json(response);
       } catch (dbErr) {
-        console.error("Database query error:", dbErr);
+        logger.error("Database query error:", dbErr);
         throw new Error(`Database error: ${dbErr instanceof Error ? dbErr.message : 'Unknown error'}`);
       }
     } catch (err) {
-      console.error("Analytics error:", err);
+      logger.error("Analytics error:", err);
       res.status(500).json({ 
         error: "Failed to fetch analytics",
         details: err instanceof Error ? err.message : "Unknown error"
@@ -380,11 +388,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       await storage.setSystemSetting('ANTHROPIC_API_KEY', key);
-      console.log("System API key updated successfully");
+      logger.info("System API key updated successfully");
 
       res.json({ success: true });
     } catch (err) {
-      console.error("Error updating system API key:", err);
+      logger.error("Error updating system API key:", err);
       res.status(500).json({ 
         error: "Erro ao atualizar a chave API do sistema",
         details: err instanceof Error ? err.message : "Erro desconhecido"
@@ -398,7 +406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const key = await storage.getSystemSetting('ANTHROPIC_API_KEY');
       res.json({ key });
     } catch (err) {
-      console.error("Error fetching system API key:", err);
+      logger.error("Error fetching system API key:", err);
       res.status(500).json({ 
         error: "Erro ao buscar a chave API do sistema",
         details: err instanceof Error ? err.message : "Erro desconhecido"
@@ -412,16 +420,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { mission } = req.body;
 
       if (!mission || typeof mission !== 'string' || mission.length > 1000) {
-        console.error("Invalid mission:", mission);
+        logger.warn("Invalid mission", { missionLength: mission?.length, missionType: typeof mission });
         res.status(400).json({ error: "Invalid mission format or length" });
         return;
       }
 
-      console.log("Generating prompt for mission:", mission);
+      logger.info("Generating prompt for mission", { mission });
 
       const systemKey = await storage.getSystemSetting('ANTHROPIC_API_KEY');
       if (!systemKey) {
-        console.error("No system API key available");
+        logger.error("No system API key available");
         res.status(500).json({ error: "System API key not configured" });
         return;
       }
@@ -452,11 +460,11 @@ Format the response as a single, well-structured system prompt without any expla
         ? response.content[0].text 
         : 'Error: Unexpected response format';
 
-      console.log("Generated prompt:", generatedPrompt);
+      logger.info("Generated prompt", { generatedPrompt });
       res.json({ prompt: generatedPrompt });
 
     } catch (err) {
-      console.error("Prompt generation error:", err);
+      logger.error("Prompt generation error:", err);
       res.status(500).json({ 
         error: "Failed to generate prompt",
         details: err instanceof Error ? err.message : "Unknown error"
@@ -469,16 +477,16 @@ Format the response as a single, well-structured system prompt without any expla
       const { currentPrompt } = req.body;
 
       if (!currentPrompt || typeof currentPrompt !== 'string' || currentPrompt.length > 2000) {
-        console.error("Invalid prompt:", currentPrompt);
+        logger.warn("Invalid prompt", { promptLength: currentPrompt?.length, promptType: typeof currentPrompt });
         res.status(400).json({ error: "Invalid prompt format or length" });
         return;
       }
 
-      console.log("Improving prompt:", currentPrompt);
+      logger.info("Improving prompt", { currentPrompt });
 
       const systemKey = await storage.getSystemSetting('ANTHROPIC_API_KEY');
       if (!systemKey) {
-        console.error("No system API key available");
+        logger.error("No system API key available");
         res.status(500).json({ error: "System API key not configured" });
         return;
       }
@@ -511,11 +519,11 @@ Return only the improved prompt without any explanations or metadata.`
         ? response.content[0].text 
         : 'Error: Unexpected response format';
 
-      console.log("Improved prompt:", improvedPrompt);
+      logger.info("Improved prompt", { improvedPrompt });
       res.json({ prompt: improvedPrompt });
 
     } catch (err) {
-      console.error("Prompt improvement error:", err);
+      logger.error("Prompt improvement error:", err);
       res.status(500).json({ 
         error: "Failed to improve prompt",
         details: err instanceof Error ? err.message : "Unknown error"
@@ -529,16 +537,16 @@ Return only the improved prompt without any explanations or metadata.`
       const { prompt } = req.body;
 
       if (!prompt || typeof prompt !== 'string' || prompt.length > 2000) {
-        console.error("Invalid prompt:", prompt);
+        logger.warn("Invalid prompt", { promptLength: prompt?.length, promptType: typeof prompt });
         res.status(400).json({ error: "Invalid prompt format or length" });
         return;
       }
 
-      console.log("Testing prompt:", prompt);
+      logger.info("Testing prompt", { prompt });
 
       const systemKey = await storage.getSystemSetting('ANTHROPIC_API_KEY');
       if (!systemKey) {
-        console.error("No system API key available");
+        logger.error("No system API key available");
         res.status(500).json({ error: "System API key not configured" });
         return;
       }
@@ -561,11 +569,11 @@ Return only the improved prompt without any explanations or metadata.`
         ? response.content[0].text 
         : 'Error: Unexpected response format';
 
-      console.log("Preview response:", previewResponse);
+      logger.info("Preview response", { previewResponse });
       res.json({ response: previewResponse });
 
     } catch (err) {
-      console.error("Prompt testing error:", err);
+      logger.error("Prompt testing error:", err);
       res.status(500).json({ 
         error: "Failed to test prompt",
         details: err instanceof Error ? err.message : "Unknown error"
@@ -588,7 +596,7 @@ Return only the improved prompt without any explanations or metadata.`
       const knowledgeBaseEntry = await storage.createKnowledgeBaseEntry(botId, originalname, buffer);
       res.json(knowledgeBaseEntry);
     } catch(e){
-      console.error('Error creating knowledge base entry', e);
+      logger.error('Error creating knowledge base entry', e);
       res.status(500).json({ error: 'Failed to create knowledge base entry' });
     }
   });
@@ -617,7 +625,7 @@ Return only the improved prompt without any explanations or metadata.`
 
       res.json({ config });
     } catch (err) {
-      console.error("Error fetching rate limit config:", err);
+      logger.error("Error fetching rate limit config:", err);
       res.status(500).json({ 
         error: "Failed to fetch rate limit configuration",
         details: err instanceof Error ? err.message : "Unknown error"
@@ -643,11 +651,11 @@ Return only the improved prompt without any explanations or metadata.`
       ]);
 
       // Log the update
-      console.log("Rate limit configuration updated:", config);
+      logger.info("Rate limit configuration updated", { config });
 
       res.json({ success: true });
     } catch (err) {
-      console.error("Error updating rate limit config:", err);
+      logger.error("Error updating rate limit config:", err);
       res.status(500).json({ 
         error: "Failed to update rate limit configuration",
         details: err instanceof Error ? err.message : "Unknown error"
@@ -658,40 +666,10 @@ Return only the improved prompt without any explanations or metadata.`
   // Get system logs
   app.get("/api/admin/logs", adminLimiter, async (_req, res) => {
     try {
-      // Get the last 1000 chat interactions ordered by timestamp
-      const logs = await db
-        .select({
-          level: sql`
-            CASE 
-              WHEN error_message IS NOT NULL THEN 'error'
-              WHEN success = false THEN 'warning'
-              ELSE 'info'
-            END
-          `.as('level'),
-          message: sql`
-            CASE
-              WHEN error_message IS NOT NULL THEN 
-                CONCAT('Erro na interação: ', error_message)
-              ELSE 
-                CONCAT(
-                  'Bot ID: ', bot_id::text,
-                  ' | Modelo: ', model,
-                  ' | Tokens: ', tokens_used::text,
-                  ' | Tempo: ', response_time::text, 'ms',
-                  ' | Mensagem: ', SUBSTRING(user_message, 1, 100),
-                  ' | Resposta: ', SUBSTRING(bot_response, 1, 100)
-                )
-            END
-          `.as('message'),
-          timestamp: chatInteractions.timestamp
-        })
-        .from(chatInteractions)
-        .orderBy(desc(chatInteractions.timestamp))
-        .limit(1000);
-
+      const logs = await logger.getRecentLogs();
       res.json(logs);
     } catch (err) {
-      console.error("Error fetching logs:", err);
+      logger.error("Error fetching logs", err as Error);
       res.status(500).json({ 
         error: "Failed to fetch logs",
         details: err instanceof Error ? err.message : "Unknown error"
@@ -755,7 +733,7 @@ Return only the improved prompt without any explanations or metadata.`
 
       res.json(metrics);
     } catch (err) {
-      console.error("Error fetching system health metrics:", err);
+      logger.error("Error fetching system health metrics:", err);
       res.status(500).json({ 
         error: "Failed to fetch system health metrics",
         details: err instanceof Error ? err.message : "Unknown error"
