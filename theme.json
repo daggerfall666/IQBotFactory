@@ -1,10 +1,11 @@
+
 {
   "variant": "professional",
-  "primary": "hsl(230 70% 55%)",
+  "primary": "hsl(215 90% 50%)",
   "appearance": "system",
-  "radius": 0.75,
+  "radius": 0.5,
   "transitions": {
     "duration": "0.2s",
-    "timing": "ease-in-out"
+    "timing": "cubic-bezier(0.4, 0, 0.2, 1)"
   }
 }

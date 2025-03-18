@@ -476,10 +476,10 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                   name="settings.theme.chatBubbleStyle"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-medium">Estilo das Mensagens</FormLabel>
+                      <FormLabel className="text-sm font-semibold tracking-tight">Estilo das Mensagens</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value} className="w-full">
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="h-9 bg-background/50 shadow-sm">
                             <SelectValue placeholder="Selecione um estilo" />
                           </SelectTrigger>
                         </FormControl>
