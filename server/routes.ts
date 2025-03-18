@@ -301,20 +301,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analytics endpoint
-  app.get("/api/analytics/:botId", apiLimiter, async (req, res) => {
+  app.get("/api/chatbots/:id/analytics", apiLimiter, async (req, res) => {
     try {
-      const botId = parseInt(req.params.botId);
+      const botId = parseInt(req.params.id);
       if (isNaN(botId)) {
-        logger.warn("Invalid bot ID", { botId: req.params.botId });
-        res.status(400).json({ error: "Invalid bot ID" });
-        return;
+        logger.warn("Invalid bot ID", { botId: req.params.id });
+        return res.status(400).json({ 
+          error: "Invalid bot ID",
+          details: "Bot ID must be a valid number" 
+        });
       }
 
       const bot = await storage.getChatbot(botId);
       if (!bot) {
         logger.warn("Chatbot not found", { botId });
-        res.status(404).json({ error: "Chatbot not found" });
-        return;
+        return res.status(404).json({ 
+          error: "Chatbot not found",
+          details: "No chatbot exists with the provided ID" 
+        });
       }
 
       logger.info("Fetching analytics for bot", { botId });
@@ -346,7 +350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Garantir que temos valores padrão e dados válidos
+        // Calculate analytics
         const totalInteractions = interactions.length;
         const successfulInteractions = interactions.filter(i => i?.success === true).length;
 
@@ -364,19 +368,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return acc + tokens;
         }, 0);
 
-        // Agrupar interações por dia com validação de data
-        const usageByDay = interactions.reduce((acc, i) => {
-          try {
-            const timestamp = i?.timestamp ? new Date(i.timestamp) : null;
-            if (timestamp && !isNaN(timestamp.getTime())) {
-              const date = timestamp.toISOString().split('T')[0];
-              acc[date] = (acc[date] || 0) + 1;
-            }
-          } catch (err) {
-            logger.error("Error processing interaction date:", err);
+        // Group interactions by day
+        const usageByDay = interactions.reduce((acc: Record<string, number>, i) => {
+          if (i?.timestamp) {
+            const date = new Date(i.timestamp).toISOString().split('T')[0];
+            acc[date] = (acc[date] || 0) + 1;
           }
           return acc;
-        }, {} as Record<string, number>);
+        }, {});
 
         const response = {
           totalInteractions,
@@ -392,14 +391,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
 
         logger.info("Final analytics response:", response);
-        res.json(response);
+        return res.json(response);
       } catch (dbErr) {
         logger.error("Database query error:", dbErr);
         throw new Error(`Database error: ${dbErr instanceof Error ? dbErr.message : 'Unknown error'}`);
       }
     } catch (err) {
       logger.error("Analytics error:", err);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         error: "Failed to fetch analytics",
         details: err instanceof Error ? err.message : "Unknown error"
       });

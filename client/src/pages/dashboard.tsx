@@ -28,17 +28,8 @@ export default function Dashboard() {
   const { toast } = useToast();
 
   const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useQuery<Analytics>({
-    queryKey: [`/api/analytics/${id}`],
-    refetchInterval: 30000,
-    retry: 1,
-    onError: (err) => {
-      console.error("Error fetching analytics:", err);
-      toast({
-        title: "Error",
-        description: "Could not load statistics",
-        variant: "destructive"
-      });
-    }
+    queryKey: [`/api/chatbots/${id}/analytics`],
+    refetchInterval: 30000
   });
 
   const { data: bot, isLoading: botLoading, error: botError } = useQuery({
