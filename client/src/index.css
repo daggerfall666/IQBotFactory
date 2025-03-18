@@ -18,6 +18,22 @@
   ::selection {
     @apply bg-primary/20 text-primary;
   }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+
+  h1 {
+    @apply text-4xl lg:text-5xl;
+  }
+
+  h2 {
+    @apply text-3xl lg:text-4xl;
+  }
+
+  h3 {
+    @apply text-2xl lg:text-3xl;
+  }
 }
 
 @layer components {
@@ -31,5 +47,59 @@
 
   .gradient-heading {
     @apply bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent font-bold;
+  }
+
+  .page-header {
+    @apply space-y-2 mb-8;
+  }
+
+  .page-title {
+    @apply gradient-heading text-4xl lg:text-5xl;
+  }
+
+  .page-description {
+    @apply text-muted-foreground text-lg max-w-2xl;
+  }
+
+  .section {
+    @apply py-8 space-y-6;
+  }
+
+  .section-title {
+    @apply text-2xl font-semibold tracking-tight mb-4;
+  }
+
+  .form-container {
+    @apply space-y-6 max-w-2xl mx-auto p-6;
+  }
+
+  .card-grid {
+    @apply grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3;
+  }
+
+  .stats-grid {
+    @apply grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4;
+  }
+
+  .nav-link {
+    @apply flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors 
+    hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground;
+  }
+
+  .button-icon {
+    @apply h-4 w-4 mr-2;
+  }
+
+  .input-group {
+    @apply space-y-2;
+  }
+
+  .input-label {
+    @apply text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors 
+    focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
   }
 }

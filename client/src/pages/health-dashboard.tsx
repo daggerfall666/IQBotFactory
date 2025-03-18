@@ -38,8 +38,10 @@ interface SystemHealth {
 const StatusIndicator = ({ status, text }: { status: boolean; text: string }) => {
   return (
     <div className={cn(
-      "px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2",
-      status ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
+      "px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2 transition-colors duration-200",
+      status 
+        ? "bg-success/15 text-success hover:bg-success/25" 
+        : "bg-destructive/15 text-destructive hover:bg-destructive/25"
     )}>
       {status ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
       {text}
@@ -93,10 +95,10 @@ export default function HealthDashboard() {
       <div className="container py-8 space-y-8">
         {/* Header */}
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+          <h1 className="gradient-heading">
             System Health
           </h1>
-          <p className="text-muted-foreground text-lg">
+          <p className="page-description">
             Monitor system performance and health metrics in real-time
           </p>
         </div>
@@ -118,7 +120,7 @@ export default function HealthDashboard() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Uptime */}
-              <Card className="border-none shadow">
+              <Card className="border-none shadow transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Clock className="h-4 w-4 text-primary" />
@@ -134,7 +136,7 @@ export default function HealthDashboard() {
               </Card>
 
               {/* Memory Usage */}
-              <Card className="border-none shadow">
+              <Card className="border-none shadow transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Server className="h-4 w-4 text-primary" />
@@ -152,7 +154,7 @@ export default function HealthDashboard() {
               </Card>
 
               {/* CPU Usage */}
-              <Card className="border-none shadow">
+              <Card className="border-none shadow transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Activity className="h-4 w-4 text-primary" />
@@ -168,7 +170,7 @@ export default function HealthDashboard() {
               </Card>
 
               {/* Process Memory */}
-              <Card className="border-none shadow">
+              <Card className="border-none shadow transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Database className="h-4 w-4 text-primary" />
@@ -201,7 +203,7 @@ export default function HealthDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="border-none shadow">
+              <Card className="border-none shadow transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">Response Time</CardTitle>
                 </CardHeader>
@@ -213,7 +215,7 @@ export default function HealthDashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="border-none shadow">
+              <Card className="border-none shadow transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">Requests</CardTitle>
                 </CardHeader>
@@ -223,7 +225,7 @@ export default function HealthDashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="border-none shadow">
+              <Card className="border-none shadow transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">Error Rate</CardTitle>
                 </CardHeader>
