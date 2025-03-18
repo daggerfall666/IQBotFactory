@@ -746,36 +746,23 @@ Return only the improved prompt without any explanations or metadata.`
       const apiMetrics = await db
         .select({
           total: sql`COUNT(*)`,
-          errors: sql`COUNT(CASE WHEN error_message IS NOT NULL THEN 1 END)`,
+          errors: sql`COUNT(CASE WHEN success = false THEN 1 END)`,
           avgResponseTime: sql`AVG(response_time)`,
         })
         .from(chatInteractions)
         .where(sql`timestamp >= ${startTime}`);
 
-      // Add API metrics to response
-      metrics.api = {
-        totalRequests: apiMetrics[0].total,
-        errorCount: apiMetrics[0].errors,
+      const result = {
+        totalRequests: apiMetrics[0].total || 0,
+        errorRate: apiMetrics[0].total > 0 ? (apiMetrics[0].errors / apiMetrics[0].total * 100) : 0,
         averageResponseTime: apiMetrics[0].avgResponseTime || 0,
-        errorRate: apiMetrics[0].total > 0 ? (apiMetrics[0].errors / apiMetrics[0].total) * 100 : 0
+        activeUsers: 0, // To be implemented
+        cpuUsage: os.loadavg()[0],
+        memoryUsage: process.memoryUsage().heapUsed,
+        uptime: process.uptime()
       };
 
-      // Add database status
-      try {
-        await db.select().from(chatInteractions).limit(1);
-        metrics.database = {
-          status: 'connected',
-          healthy: true
-        };
-      } catch (err) {
-        metrics.database = {
-          status: 'error',
-          healthy: false,
-          error: err instanceof Error ? err.message : 'Unknown database error'
-        };
-      }
-
-      res.json(metrics);
+      return res.json(result);
     } catch (err) {
       logger.error("Error fetching system health metrics:", err);
       res.status(500).json({ 

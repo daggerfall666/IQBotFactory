@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Layout } from "@/components/layout";
 import { 
@@ -7,10 +6,8 @@ import {
   MessageSquare, 
   Check, 
   Clock, 
-  Zap, 
-  Bot,
-  Users,
-  Activity
+  Activity,
+  Bot
 } from "lucide-react";
 import { 
   ResponsiveContainer, 
@@ -26,7 +23,7 @@ import {
 } from "recharts";
 import type { Chatbot } from "@shared/schema";
 
-interface SystemAnalytics {
+interface SystemHealth {
   totalRequests: number;
   errorRate: number;
   averageResponseTime: number;
@@ -36,42 +33,25 @@ interface SystemAnalytics {
   uptime: number;
 }
 
-interface ChatbotAnalytics {
-  totalInteractions: number;
-  successRate: number;
-  averageResponseTime: number;
-  totalTokensUsed: number;
-  usageByDay: { date: string; interactions: number }[];
-}
-
-interface BotWithAnalytics extends Chatbot {
-  analytics?: ChatbotAnalytics;
+interface ChatbotWithStats extends Chatbot {
+  analytics?: {
+    totalInteractions: number;
+    successRate: number;
+    averageResponseTime: number;
+  };
 }
 
 export default function Analytics() {
-  const { data: chatbots = [], isLoading: isLoadingBots } = useQuery<BotWithAnalytics[]>({
+  const { data: chatbots = [], isLoading: isLoadingBots } = useQuery<ChatbotWithStats[]>({
     queryKey: ["/api/chatbots"],
   });
 
-  const { data: systemHealth, isLoading: isLoadingHealth } = useQuery<SystemAnalytics>({
+  const { data: systemHealth, isLoading: isLoadingHealth } = useQuery<SystemHealth>({
     queryKey: ["/api/system/health"],
     refetchInterval: 30000,
   });
 
   const isLoading = isLoadingBots || isLoadingHealth;
-
-  // Calculate total interactions across all chatbots
-  const totalInteractions = chatbots.reduce((acc, bot) => {
-    return acc + (bot.analytics?.totalInteractions || 0);
-  }, 0);
-
-  // Prepare data for the usage chart
-  const usageData = chatbots.map(bot => ({
-    name: bot.name,
-    interactions: bot.analytics?.totalInteractions || 0,
-    successRate: bot.analytics?.successRate || 0,
-    responseTime: bot.analytics?.averageResponseTime || 0
-  }));
 
   if (isLoading) {
     return (
@@ -84,6 +64,19 @@ export default function Analytics() {
     );
   }
 
+  // Calculate total interactions
+  const totalInteractions = chatbots.reduce((acc, bot) => {
+    return acc + (bot.analytics?.totalInteractions || 0);
+  }, 0);
+
+  // Prepare data for charts
+  const botPerformanceData = chatbots.map(bot => ({
+    name: bot.name,
+    interactions: bot.analytics?.totalInteractions || 0,
+    successRate: bot.analytics?.successRate || 0,
+    responseTime: bot.analytics?.averageResponseTime || 0
+  }));
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8 space-y-8">
@@ -91,12 +84,11 @@ export default function Analytics() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
             Analytics Overview
           </h1>
-          <p className="text-muted-foreground mt-2 text-lg">
+          <p className="text-muted-foreground mt-2">
             Monitor your chatbots performance and system health
           </p>
         </div>
 
-        {/* System Health Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="pb-2">
@@ -137,7 +129,7 @@ export default function Analytics() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {systemHealth && typeof systemHealth.errorRate === 'number'
+                {systemHealth && systemHealth.errorRate !== undefined
                   ? `${(100 - systemHealth.errorRate).toFixed(1)}%`
                   : "N/A"}
               </div>
@@ -167,17 +159,16 @@ export default function Analytics() {
           </Card>
         </div>
 
-        {/* Performance Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Chatbot Performance</CardTitle>
+              <CardTitle>Chatbot Usage</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[350px]">
-                {usageData.length > 0 ? (
+                {botPerformanceData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={usageData}>
+                    <BarChart data={botPerformanceData}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis dataKey="name" />
                       <YAxis />
@@ -185,13 +176,18 @@ export default function Analytics() {
                       <Legend />
                       <Bar
                         dataKey="interactions"
-                        name="Interactions"
+                        name="Total Interactions"
                         fill="hsl(var(--primary))"
                       />
                       <Bar
                         dataKey="successRate"
                         name="Success Rate (%)"
                         fill="hsl(var(--primary)/0.5)"
+                      />
+                      <Bar
+                        dataKey="responseTime"
+                        name="Avg Response Time (ms)"
+                        fill="hsl(var(--primary)/0.75)"
                       />
                     </BarChart>
                   </ResponsiveContainer>
@@ -206,27 +202,37 @@ export default function Analytics() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Response Times</CardTitle>
+              <CardTitle>System Performance</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[350px]">
-                {usageData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={usageData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="responseTime"
-                        name="Avg. Response Time (ms)"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                {systemHealth ? (
+                  <div className="grid grid-cols-2 gap-4 h-full place-content-center">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">CPU Usage</p>
+                      <div className="text-2xl font-bold">
+                        {systemHealth.cpuUsage.toFixed(1)}%
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Memory</p>
+                      <div className="text-2xl font-bold">
+                        {Math.round(systemHealth.memoryUsage / 1024 / 1024)} MB
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Uptime</p>
+                      <div className="text-2xl font-bold">
+                        {Math.floor(systemHealth.uptime / 3600)}h {Math.floor((systemHealth.uptime % 3600) / 60)}m
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Error Rate</p>
+                      <div className="text-2xl font-bold">
+                        {systemHealth.errorRate.toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center h-full">
                     <p className="text-muted-foreground">No data available</p>
@@ -236,43 +242,6 @@ export default function Analytics() {
             </CardContent>
           </Card>
         </div>
-
-        {/* System Resources */}
-        {systemHealth && (
-          <Card>
-            <CardHeader>
-              <CardTitle>System Resources</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">CPU Usage</p>
-                  <div className="text-2xl font-bold">
-                    {typeof systemHealth.cpuUsage === 'number' 
-                      ? `${systemHealth.cpuUsage.toFixed(1)}%`
-                      : 'N/A'}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Memory Usage</p>
-                  <div className="text-2xl font-bold">
-                    {typeof systemHealth.memoryUsage === 'number'
-                      ? `${Math.round(systemHealth.memoryUsage / 1024 / 1024)} MB`
-                      : 'N/A'}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Uptime</p>
-                  <div className="text-2xl font-bold">
-                    {typeof systemHealth.uptime === 'number'
-                      ? `${Math.floor(systemHealth.uptime / 3600)}h ${Math.floor((systemHealth.uptime % 3600) / 60)}m`
-                      : 'N/A'}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </Layout>
   );
