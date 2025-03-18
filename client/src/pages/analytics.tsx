@@ -36,20 +36,31 @@ interface SystemAnalytics {
   uptime: number;
 }
 
+interface ChatbotAnalytics {
+  totalInteractions: number;
+  successRate: number;
+  averageResponseTime: number;
+  totalTokensUsed: number;
+  usageByDay: { date: string; interactions: number }[];
+}
+
+interface BotWithAnalytics extends Chatbot {
+  analytics?: ChatbotAnalytics;
+}
+
 export default function Analytics() {
-  const { data: chatbots = [] } = useQuery<Chatbot[]>({
+  const { data: chatbots = [] } = useQuery<BotWithAnalytics[]>({
     queryKey: ["/api/chatbots"],
   });
 
-  const { data: systemHealth } = useQuery<SystemAnalytics>({
+  const { data: systemHealth, isLoading } = useQuery<SystemAnalytics>({
     queryKey: ["/api/system/health"],
     refetchInterval: 30000,
   });
 
   // Calculate total interactions across all chatbots
   const totalInteractions = chatbots.reduce((acc, bot) => {
-    const interactions = bot.analytics?.totalInteractions || 0;
-    return acc + interactions;
+    return acc + (bot.analytics?.totalInteractions || 0);
   }, 0);
 
   // Prepare data for the usage chart
@@ -59,6 +70,19 @@ export default function Analytics() {
     successRate: bot.analytics?.successRate || 0,
     responseTime: bot.analytics?.averageResponseTime || 0
   }));
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="responsive-container flex items-center justify-center min-h-[60vh]">
+          <div className="text-center space-y-4">
+            <BarChart3 className="h-16 w-16 animate-bounce text-primary/60" />
+            <p className="text-muted-foreground">Loading analytics...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -113,9 +137,9 @@ export default function Analytics() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {systemHealth?.errorRate ? (
-                  `${(100 - systemHealth.errorRate).toFixed(1)}%`
-                ) : "N/A"}
+                {systemHealth && typeof systemHealth.errorRate === 'number'
+                  ? `${(100 - systemHealth.errorRate).toFixed(1)}%`
+                  : "N/A"}
               </div>
               <p className="text-xs text-muted-foreground">
                 System reliability
@@ -133,7 +157,7 @@ export default function Analytics() {
             <CardContent>
               <div className="text-2xl font-bold">
                 {systemHealth?.averageResponseTime
-                  ? `${systemHealth.averageResponseTime.toFixed(0)}ms`
+                  ? `${Math.round(systemHealth.averageResponseTime)}ms`
                   : "N/A"}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -151,25 +175,31 @@ export default function Analytics() {
             </CardHeader>
             <CardContent>
               <div className="h-[350px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={usageData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar
-                      dataKey="interactions"
-                      name="Interactions"
-                      fill="hsl(var(--primary))"
-                    />
-                    <Bar
-                      dataKey="successRate"
-                      name="Success Rate (%)"
-                      fill="hsl(var(--primary)/0.5)"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                {usageData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={usageData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar
+                        dataKey="interactions"
+                        name="Interactions"
+                        fill="hsl(var(--primary))"
+                      />
+                      <Bar
+                        dataKey="successRate"
+                        name="Success Rate (%)"
+                        fill="hsl(var(--primary)/0.5)"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground">No data available</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -180,22 +210,28 @@ export default function Analytics() {
             </CardHeader>
             <CardContent>
               <div className="h-[350px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={usageData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="responseTime"
-                      name="Avg. Response Time (ms)"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {usageData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={usageData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="responseTime"
+                        name="Avg. Response Time (ms)"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground">No data available</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -212,19 +248,25 @@ export default function Analytics() {
                 <div className="space-y-2">
                   <p className="text-sm font-medium">CPU Usage</p>
                   <div className="text-2xl font-bold">
-                    {systemHealth.cpuUsage.toFixed(1)}%
+                    {typeof systemHealth.cpuUsage === 'number' 
+                      ? `${systemHealth.cpuUsage.toFixed(1)}%`
+                      : 'N/A'}
                   </div>
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Memory Usage</p>
                   <div className="text-2xl font-bold">
-                    {(systemHealth.memoryUsage / 1024 / 1024).toFixed(0)} MB
+                    {typeof systemHealth.memoryUsage === 'number'
+                      ? `${Math.round(systemHealth.memoryUsage / 1024 / 1024)} MB`
+                      : 'N/A'}
                   </div>
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Uptime</p>
                   <div className="text-2xl font-bold">
-                    {Math.floor(systemHealth.uptime / 3600)}h {Math.floor((systemHealth.uptime % 3600) / 60)}m
+                    {typeof systemHealth.uptime === 'number'
+                      ? `${Math.floor(systemHealth.uptime / 3600)}h ${Math.floor((systemHealth.uptime % 3600) / 60)}m`
+                      : 'N/A'}
                   </div>
                 </div>
               </div>
