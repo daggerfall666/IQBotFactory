@@ -23,17 +23,17 @@ export function Sidebar({ className, botId }: SidebarProps) {
       icon: LayoutDashboard
     },
     {
-      title: "Configurações",
+      title: "Settings",
       href: `/bot/${botId}`,
       icon: Settings2
     },
     {
-      title: "Conversas",
+      title: "Conversations",
       href: `/bot/${botId}/chats`,
       icon: MessageSquare
     },
     {
-      title: "Base de Conhecimento",
+      title: "Knowledge Base",
       href: `/bot/${botId}/knowledge`,
       icon: Database
     },
@@ -43,7 +43,7 @@ export function Sidebar({ className, botId }: SidebarProps) {
       icon: BarChart3
     },
     {
-      title: "Integração",
+      title: "Integration",
       href: `/bot/${botId}/integration`,
       icon: Code2
     }
@@ -54,7 +54,7 @@ export function Sidebar({ className, botId }: SidebarProps) {
       icon: LayoutDashboard
     },
     {
-      title: "Documentação",
+      title: "Documentation",
       href: "/docs",
       icon: BookOpen
     },
@@ -66,24 +66,22 @@ export function Sidebar({ className, botId }: SidebarProps) {
   ];
 
   return (
-    <div className={cn("pb-12 border-r min-h-screen", className)}>
-      <div className="space-y-4 py-4">
-        <div className="px-3 py-2">
-          <div className="space-y-1">
-            {items.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start transition-all hover:bg-muted"
-                >
-                  <item.icon className="mr-2 h-4 w-4" />
-                  {item.title}
-                </Button>
-              </Link>
-            ))}
-          </div>
+    <div className={cn("space-y-4", className)}>
+      <nav>
+        <div className="space-y-1">
+          {items.map((item) => (
+            <Link key={item.href} href={item.href}>
+              <Button
+                variant="ghost"
+                className="w-full justify-start transition-all hover:bg-muted/80 group relative"
+              >
+                <item.icon className="mr-2 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span className="truncate">{item.title}</span>
+              </Button>
+            </Link>
+          ))}
         </div>
-      </div>
+      </nav>
     </div>
   );
 }
