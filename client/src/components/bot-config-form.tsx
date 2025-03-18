@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import {
   Form,
   FormControl,
@@ -44,13 +43,57 @@ import { Settings2, MessageSquare, Brush, Code, Wand2, Sparkles } from "lucide-r
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"; // Assuming these are available
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ImageUpload } from "./image-upload";
 
 interface BotConfigFormProps {
   bot: Chatbot;
   onSubmit: (data: Partial<Chatbot>) => void;
   isLoading?: boolean;
 }
+
+// Demo bot configuration
+const demoBotConfig: Partial<Chatbot> = {
+  name: "Claude Assistant",
+  description: "Um assistente AI amigável e versátil para ajudar em várias tarefas",
+  settings: {
+    initialMessage: "Olá! Sou o Claude, seu assistente pessoal. Como posso ajudar você hoje?",
+    model: "claude-3-sonnet-20240229",
+    temperature: 0.7,
+    maxTokens: 2000,
+    systemPrompt: `Você é o Claude, um assistente AI amigável e prestativo com personalidade otimista e empática. Seu objetivo é ajudar os usuários de forma clara e eficiente, mantendo um tom conversacional agradável.
+
+Diretrizes:
+- Seja claro e direto, mas mantenha um tom amigável
+- Use analogias e exemplos quando útil
+- Demonstre empatia e compreensão
+- Divida explicações complexas em partes menores
+- Peça esclarecimentos quando necessário
+- Mantenha as respostas concisas mas informativas`,
+    theme: {
+      primaryColor: "#7C3AED",
+      fontFamily: "Inter",
+      borderRadius: 12,
+      chatBubbleStyle: "modern",
+      darkMode: false,
+      avatarUrl: "https://ui-avatars.com/api/?name=Claude&background=7C3AED&color=fff",
+      avatarBackgroundColor: "#7C3AED",
+      botName: "Claude",
+      customMessageStyles: {
+        userBackground: "#7C3AED",
+        botBackground: "#F4F4F5",
+        userText: "#FFFFFF",
+        botText: "#18181B"
+      }
+    }
+  },
+  wordpressConfig: {
+    position: "bottom-right",
+    customCss: "",
+    hideOnMobile: false,
+    customPosition: {}
+  }
+};
 
 export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -63,6 +106,16 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
     resolver: zodResolver(insertChatbotSchema),
     defaultValues: bot
   });
+
+  const handleLoadDemoConfig = () => {
+    Object.entries(demoBotConfig).forEach(([key, value]) => {
+      form.setValue(key as any, value as any);
+    });
+    toast({
+      title: "Configuração demo carregada",
+      description: "As configurações do bot demo foram aplicadas"
+    });
+  };
 
   async function handleGeneratePrompt() {
     if (!mission.trim()) {
@@ -138,6 +191,17 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleLoadDemoConfig}
+            className="mb-4"
+          >
+            Carregar Configuração Demo
+          </Button>
+        </div>
+
         <Tabs defaultValue="general" className="w-full">
           <TabsList className="grid grid-cols-4 w-full">
             <TabsTrigger value="general" className="flex items-center gap-2">
@@ -400,6 +464,7 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
               </CardContent>
             </Card>
           </TabsContent>
+
           <TabsContent value="appearance" className="space-y-6 mt-6">
             <Card>
               <CardHeader>
@@ -414,18 +479,30 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                   name="settings.theme.avatarUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>URL do Avatar</FormLabel>
+                      <FormLabel>Avatar do Bot</FormLabel>
                       <FormControl>
-                        <div className="flex gap-4 items-center">
-                          <Input {...field} placeholder="https://example.com/avatar.png" />
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={field.value} />
-                            <AvatarFallback>{bot.name[0]?.toUpperCase()}</AvatarFallback>
-                          </Avatar>
+                        <div className="flex items-center gap-4">
+                          <ImageUpload
+                            onImageSelected={(file) => {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                field.onChange(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                            defaultPreview={field.value}
+                          />
+                          <div className="flex-1">
+                            <Input
+                              {...field}
+                              placeholder="Ou insira uma URL de imagem"
+                              className="mt-2"
+                            />
+                          </div>
                         </div>
                       </FormControl>
                       <FormDescription>
-                        URL da imagem do avatar do chatbot (opcional)
+                        Faça upload ou insira a URL do avatar do seu chatbot
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
