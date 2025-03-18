@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { performance } from 'perf_hooks';
 
 type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
@@ -79,7 +78,7 @@ class Logger {
   }
 
   public debug(message: string, metadata?: Record<string, any>): void {
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env['NODE_ENV'] === 'development') {
       const entry = this.formatLogEntry('debug', message, metadata);
       this.writeLog(entry);
       console.debug(`[DEBUG] ${message}`, metadata || '');
@@ -89,17 +88,17 @@ class Logger {
   public async getRecentLogs(level?: LogLevel, limit: number = 100): Promise<LogEntry[]> {
     const logs: LogEntry[] = [];
     const files = await fs.promises.readdir(this.logDirectory);
-    
+
     for (const file of files) {
       if (level && !file.startsWith(level)) continue;
-      
+
       const content = await fs.promises.readFile(path.join(this.logDirectory, file), 'utf-8');
       const entries = content
         .split('\n')
         .filter(Boolean)
         .map(line => JSON.parse(line) as LogEntry)
         .slice(-limit);
-      
+
       logs.push(...entries);
     }
 
