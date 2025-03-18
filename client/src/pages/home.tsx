@@ -250,12 +250,12 @@ export default function Home() {
                       <Link href={`/bot/${bot.id}`} className="col-span-2">
                         <Button variant="default" className="w-full shadow hover:shadow-md transition-all">
                           <Settings2 className="mr-2 h-4 w-4" />
-                          Configurar
+                          Configure
                         </Button>
                       </Link>
                       <Link href={`/bot/${bot.id}/knowledge`}>
-                        <Button variant="outline" className="w-full shadow hover:shadow-md transition-all">
-                          Base de Conhecimento
+                        <Button variant="outline" className="w-full shadow hover:shadow-md transition-all truncate">
+                          Knowledge Base
                         </Button>
                       </Link>
                       <Link href={`/bot/${bot.id}/dashboard`}>
