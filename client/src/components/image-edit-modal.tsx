@@ -22,10 +22,10 @@ interface ImageEditModalProps {
 export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditModalProps) {
   const [crop, setCrop] = useState<Crop>({
     unit: '%',
-    width: 90,
-    height: 90,
-    x: 5,
-    y: 5
+    width: 100,
+    height: 100,
+    x: 0,
+    y: 0
   });
   const [scale, setScale] = useState(1);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -43,17 +43,41 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
     const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
 
-    // Set preview canvas size (small for preview)
+    const cropX = (crop.x * imgRef.current.width * scaleX) / 100;
+    const cropY = (crop.y * imgRef.current.height * scaleY) / 100;
+    const cropWidth = (crop.width * imgRef.current.width * scaleX) / 100;
+    const cropHeight = (crop.height * imgRef.current.height * scaleY) / 100;
+
     const previewSize = 100;
     canvas.width = previewSize;
     canvas.height = previewSize;
 
-    // Clear and create circular mask
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.beginPath();
     ctx.arc(previewSize / 2, previewSize / 2, previewSize / 2, 0, Math.PI * 2);
     ctx.clip();
+
+    ctx.drawImage(
+      imgRef.current,
+      cropX,
+      cropY,
+      cropWidth,
+      cropHeight,
+      0,
+      0,
+      previewSize,
+      previewSize
+    );
+
+    ctx.restore();
+
+    const newPreviewUrl = canvas.toDataURL();
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(newPreviewUrl);
+  };
 
     // Draw the preview
     const sourceWidth = (crop.width * scaleX * imgRef.current.width) / 100;
