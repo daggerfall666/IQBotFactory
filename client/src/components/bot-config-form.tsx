@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Chatbot } from "@shared/schema";
-import { Settings2, MessageSquare, Brush, Code, Wand2, Sparkles } from "lucide-react";
+import { Settings2, MessageSquare, Brush, Code, Wand2, Sparkles, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -492,17 +492,21 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                             }}
                             defaultPreview={field.value}
                           />
-                          <div className="flex-1">
-                            <Input
-                              {...field}
-                              placeholder="Ou insira uma URL de imagem"
-                              className="mt-2"
-                            />
-                          </div>
+                          {field.value && (
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              onClick={() => field.onChange("")}
+                              title="Remover avatar"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </FormControl>
                       <FormDescription>
-                        Faça upload ou insira a URL do avatar do seu chatbot
+                        Faça upload de uma imagem para o avatar do seu chatbot
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
