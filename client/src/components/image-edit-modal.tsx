@@ -68,6 +68,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
     const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
 
+    // Calculate source dimensions based on crop percentages
     const sourceWidth = (crop.width * scaleX * imgRef.current.width) / 100;
     const sourceHeight = (crop.height * scaleY * imgRef.current.height) / 100;
     const sourceX = (crop.x * scaleX * imgRef.current.width) / 100;
@@ -171,8 +172,8 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
               <ReactCrop
                 crop={crop}
                 onChange={(c) => {
-                  // Enforce equal width and height for perfect circle
-                  const size = Math.max(c.width, c.height);
+                  // Force crop to be a perfect square
+                  const size = Math.min(c.width, c.height);
                   const newCrop = {
                     ...c,
                     width: size,
