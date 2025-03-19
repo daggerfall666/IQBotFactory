@@ -38,64 +38,51 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     }
   }, [crop, scale]);
 
-  const getPixelCrop = (image: HTMLImageElement, percentCrop: Crop) => {
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
-
-    return {
-      x: Math.round((percentCrop.x * image.width * scaleX) / 100),
-      y: Math.round((percentCrop.y * image.height * scaleY) / 100),
-      width: Math.round((percentCrop.width * image.width * scaleX) / 100),
-      height: Math.round((percentCrop.height * image.height * scaleY) / 100)
-    };
-  };
-
-  const drawCircularImage = (
+  const drawCircularCrop = (
     ctx: CanvasRenderingContext2D,
-    image: HTMLImageElement,
-    crop: { x: number; y: number; width: number; height: number },
+    img: HTMLImageElement,
+    cropData: { x: number; y: number; width: number; height: number },
     targetSize: number
   ) => {
+    // Clear the canvas
     ctx.clearRect(0, 0, targetSize, targetSize);
-    ctx.save();
 
     // Create circular mask
+    ctx.save();
     ctx.beginPath();
     ctx.arc(targetSize / 2, targetSize / 2, targetSize / 2, 0, Math.PI * 2);
     ctx.closePath();
     ctx.clip();
 
-    // Draw the image maintaining aspect ratio
-    const aspectRatio = crop.width / crop.height;
-    let drawWidth = targetSize;
-    let drawHeight = targetSize;
+    // Calculate source dimensions
+    const scaleX = img.naturalWidth / img.width;
+    const scaleY = img.naturalHeight / img.height;
 
-    if (aspectRatio > 1) {
-      drawHeight = targetSize / aspectRatio;
-    } else {
-      drawWidth = targetSize * aspectRatio;
-    }
+    const sourceX = cropData.x * scaleX;
+    const sourceY = cropData.y * scaleY;
+    const sourceWidth = cropData.width * scaleX;
+    const sourceHeight = cropData.height * scaleY;
 
-    const drawX = (targetSize - drawWidth) / 2;
-    const drawY = (targetSize - drawHeight) / 2;
-
+    // Draw the image
     ctx.drawImage(
-      image,
-      crop.x,
-      crop.y,
-      crop.width,
-      crop.height,
-      drawX,
-      drawY,
-      drawWidth,
-      drawHeight
+      img,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      targetSize,
+      targetSize
     );
 
     ctx.restore();
   };
 
   const updatePreview = () => {
-    if (!imgRef.current || !previewCanvasRef.current || !crop.width || !crop.height) return;
+    if (!imgRef.current || !previewCanvasRef.current || !crop.width || !crop.height) {
+      return;
+    }
 
     const canvas = previewCanvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -105,8 +92,15 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     canvas.width = previewSize;
     canvas.height = previewSize;
 
-    const pixelCrop = getPixelCrop(imgRef.current, crop);
-    drawCircularImage(ctx, imgRef.current, pixelCrop, previewSize);
+    // Calculate crop coordinates in display dimensions
+    const cropData = {
+      x: (crop.x * imgRef.current.width) / 100,
+      y: (crop.y * imgRef.current.height) / 100,
+      width: (crop.width * imgRef.current.width) / 100,
+      height: (crop.height * imgRef.current.height) / 100
+    };
+
+    drawCircularCrop(ctx, imgRef.current, cropData, previewSize);
     setPreviewUrl(canvas.toDataURL());
   };
 
@@ -124,8 +118,15 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     canvas.width = outputSize;
     canvas.height = outputSize;
 
-    const pixelCrop = getPixelCrop(image, crop);
-    drawCircularImage(ctx, image, pixelCrop, outputSize);
+    // Calculate crop coordinates in display dimensions
+    const cropData = {
+      x: (crop.x * image.width) / 100,
+      y: (crop.y * image.height) / 100,
+      width: (crop.width * image.width) / 100,
+      height: (crop.height * image.height) / 100
+    };
+
+    drawCircularCrop(ctx, image, cropData, outputSize);
 
     return new Promise((resolve, reject) => {
       canvas.toBlob(
@@ -154,7 +155,6 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
 
         <div className="space-y-6 py-4">
           <div className="flex gap-6">
-            {/* Main editor area */}
             <div className="flex-1 relative bg-muted rounded-lg overflow-hidden" style={{ minHeight: '400px' }}>
               <div className="absolute inset-0 flex items-center justify-center">
                 <ReactCrop
@@ -180,23 +180,20 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
                       transformOrigin: 'center'
                     }}
                     className="max-w-full h-auto"
-                    onLoad={(e) => {
-                      // Center crop when image loads
-                      const size = Math.min(e.currentTarget.width, e.currentTarget.height);
-                      const width = (size / e.currentTarget.width) * 100;
-                      const height = (size / e.currentTarget.height) * 100;
-                      const x = ((e.currentTarget.width - size) / 2 / e.currentTarget.width) * 100;
-                      const y = ((e.currentTarget.height - size) / 2 / e.currentTarget.height) * 100;
-
-                      setCrop({ unit: '%', width, height, x, y });
-                      updatePreview();
+                    onLoad={() => {
+                      if (imgRef.current) {
+                        // Initialize centered square crop
+                        const size = 80; // 80% of the smaller dimension
+                        const x = (100 - size) / 2;
+                        const y = (100 - size) / 2;
+                        setCrop({ unit: '%', width: size, height: size, x, y });
+                      }
                     }}
                   />
                 </ReactCrop>
               </div>
             </div>
 
-            {/* Preview and controls */}
             <div className="w-[200px] space-y-4">
               <div>
                 <Label>Preview</Label>
