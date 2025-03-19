@@ -20,13 +20,13 @@ interface ImageEditModalProps {
 }
 
 export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditModalProps) {
-  // Initial crop is a perfect circle (equal width and height)
+  // Initial crop is a perfect square
   const [crop, setCrop] = useState<Crop>({
     unit: '%',
-    width: 90,
-    height: 90,
-    x: 5,
-    y: 5
+    width: 80, // Slightly smaller to show edges
+    height: 80,
+    x: 10,
+    y: 10
   });
   const [scale, setScale] = useState(1);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
     const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
 
-    // Calculate source dimensions based on crop percentages
+    // Calculate source dimensions
     const sourceWidth = (crop.width * scaleX * imgRef.current.width) / 100;
     const sourceHeight = (crop.height * scaleY * imgRef.current.height) / 100;
     const sourceX = (crop.x * scaleX * imgRef.current.width) / 100;
@@ -172,7 +172,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
               <ReactCrop
                 crop={crop}
                 onChange={(c) => {
-                  // Force crop to be a perfect square
+                  // Force a perfect square crop
                   const size = Math.min(c.width, c.height);
                   const newCrop = {
                     ...c,
@@ -183,8 +183,8 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
                   setCrop(newCrop);
                 }}
                 aspect={1}
-                circularCrop
-                keepSelection
+                className="!block !rounded-none" // Force square appearance
+                ruleOfThirds
               >
                 <img
                   ref={imgRef}
