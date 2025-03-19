@@ -41,7 +41,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
   const centerCrop = (imageWidth: number, imageHeight: number) => {
     const size = Math.min(imageWidth, imageHeight);
     return {
-      unit: '%',
+      unit: '%' as const,
       width: (size / imageWidth) * 100,
       height: (size / imageHeight) * 100,
       x: ((imageWidth - size) / 2 / imageWidth) * 100,
@@ -100,6 +100,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Set preview size
     const previewSize = 100;
     canvas.width = previewSize;
     canvas.height = previewSize;
@@ -118,6 +119,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       throw new Error('No 2d context');
     }
 
+    // Set output size
     const outputSize = 200;
     canvas.width = outputSize;
     canvas.height = outputSize;
@@ -141,7 +143,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>Editar Avatar</DialogTitle>
           <DialogDescription>
@@ -151,8 +153,9 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
 
         <div className="space-y-6 py-4">
           <div className="flex gap-6">
-            <div className="flex-1 flex items-center justify-center bg-muted rounded-lg p-6 h-[400px]">
-              <div className="relative max-w-full max-h-full flex items-center justify-center">
+            {/* Main editor area */}
+            <div className="flex-1 relative bg-muted rounded-lg overflow-hidden" style={{ minHeight: '400px' }}>
+              <div className="absolute inset-0 flex items-center justify-center">
                 <ReactCrop
                   crop={crop}
                   onChange={(c) => {
@@ -165,20 +168,18 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
                   }}
                   aspect={1}
                   circularCrop
-                  className="max-h-[350px]"
                 >
                   <img
                     ref={imgRef}
                     src={imageUrl}
                     alt="Imagem para edição"
                     style={{
-                      maxHeight: '350px',
+                      maxHeight: '400px',
                       transform: `scale(${scale})`,
                       transformOrigin: 'center'
                     }}
-                    className="max-w-none"
+                    className="max-w-full h-auto"
                     onLoad={(e) => {
-                      // Center crop when image loads
                       setCrop(centerCrop(e.currentTarget.width, e.currentTarget.height));
                     }}
                   />
@@ -186,34 +187,37 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
               </div>
             </div>
 
-            <div className="w-[100px] space-y-4">
-              <Label>Preview</Label>
-              <div className="relative w-[100px] h-[100px] rounded-full overflow-hidden bg-muted">
-                {previewUrl ? (
-                  <img 
-                    src={previewUrl} 
-                    alt="Preview" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <canvas 
-                    ref={previewCanvasRef} 
-                    className="w-full h-full"
-                  />
-                )}
+            {/* Preview and controls */}
+            <div className="w-[200px] space-y-4">
+              <div>
+                <Label>Preview</Label>
+                <div className="mt-2 relative w-[100px] h-[100px] rounded-full overflow-hidden bg-muted">
+                  {previewUrl ? (
+                    <img 
+                      src={previewUrl} 
+                      alt="Preview" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <canvas 
+                      ref={previewCanvasRef} 
+                      className="w-full h-full"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Zoom ({scale.toFixed(1)}x)</Label>
+                <Slider
+                  min={0.5}
+                  max={3}
+                  step={0.1}
+                  value={[scale]}
+                  onValueChange={([value]) => setScale(value || 1)}
+                />
               </div>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Zoom ({scale.toFixed(1)}x)</Label>
-            <Slider
-              min={0.5}
-              max={3}
-              step={0.1}
-              value={[scale]}
-              onValueChange={([value]) => setScale(value || 1)}
-            />
           </div>
 
           <div className="flex justify-end space-x-2">
