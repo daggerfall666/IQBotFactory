@@ -72,41 +72,24 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       ctx.closePath();
       ctx.clip();
 
-      // Calculate the scaling factors
-      const sourceAspect = cropData.width / cropData.height;
-      let scaledWidth = targetSize;
-      let scaledHeight = targetSize;
-
-      // Adjust dimensions to maintain aspect ratio
-      if (sourceAspect > 1) {
-        scaledHeight = targetSize / sourceAspect;
-      } else {
-        scaledWidth = targetSize * sourceAspect;
-      }
-
-      // Center the image
-      const offsetX = (targetSize - scaledWidth) / 2;
-      const offsetY = (targetSize - scaledHeight) / 2;
-
-      // Apply the zoom scale
+      // Apply the zoom scale from the center
       const centerX = targetSize / 2;
       const centerY = targetSize / 2;
-
       ctx.translate(centerX, centerY);
       ctx.scale(scale, scale);
       ctx.translate(-centerX, -centerY);
 
-      // Draw the image
+      // Draw the cropped area in the center of the canvas
       ctx.drawImage(
         img,
         cropData.x,
         cropData.y,
         cropData.width,
         cropData.height,
-        offsetX,
-        offsetY,
-        scaledWidth,
-        scaledHeight
+        0,
+        0,
+        targetSize,
+        targetSize
       );
 
       // Restore the context state
@@ -131,7 +114,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       canvas.width = previewSize;
       canvas.height = previewSize;
 
-      // Calculate actual pixel coordinates
+      // Calculate actual pixel coordinates of the crop area
       const cropData = {
         x: (crop.x * imgRef.current.width) / 100,
         y: (crop.y * imgRef.current.height) / 100,
