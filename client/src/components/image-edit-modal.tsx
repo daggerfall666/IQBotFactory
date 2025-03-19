@@ -169,9 +169,6 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     } catch (error) {
       console.error('Error getting cropped image:', error);
       throw new Error('Failed to generate cropped image');
-    } finally {
-      // Cleanup
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
   };
 
