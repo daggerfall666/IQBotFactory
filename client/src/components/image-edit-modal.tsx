@@ -43,17 +43,16 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       throw new Error('No 2d context');
     }
 
-    // Set desired output size
-    const maxSize = 200; // max size for avatar
-    const size = Math.min(maxSize, image.width);
-    canvas.width = size;
-    canvas.height = size;
+    // Set desired output size for avatar
+    const maxSize = 200;
+    canvas.width = maxSize;
+    canvas.height = maxSize;
 
     // Clear canvas and create circular clipping path
-    ctx.clearRect(0, 0, size, size);
+    ctx.clearRect(0, 0, maxSize, maxSize);
     ctx.save();
     ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    ctx.arc(maxSize / 2, maxSize / 2, maxSize / 2, 0, Math.PI * 2);
     ctx.clip();
 
     // Calculate source crop area
@@ -61,8 +60,8 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     const scaleY = image.naturalHeight / image.height;
     const sourceX = (crop.x * scaleX * image.width) / 100;
     const sourceY = (crop.y * scaleY * image.height) / 100;
-    const sourceWidth = (crop.width * scaleX * image.width * scale) / 100;
-    const sourceHeight = (crop.height * scaleY * image.height * scale) / 100;
+    const sourceWidth = (crop.width * scaleX * image.width) / 100;
+    const sourceHeight = (crop.height * scaleY * image.height) / 100;
 
     // Draw image with scaling
     ctx.drawImage(
@@ -73,8 +72,8 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       sourceHeight,
       0,
       0,
-      size,
-      size
+      maxSize,
+      maxSize
     );
 
     // Restore context
