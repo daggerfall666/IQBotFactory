@@ -33,7 +33,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
   const getCroppedImg = async (
     image: HTMLImageElement,
     crop: Crop,
-    scale = 1,
+    scale: number,
     fileName = 'cropped.png'
   ): Promise<File> => {
     const canvas = document.createElement('canvas');
@@ -43,43 +43,60 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       throw new Error('No 2d context');
     }
 
-    // Set desired output size for avatar
-    const maxSize = 200;
-    canvas.width = maxSize;
-    canvas.height = maxSize;
-
-    // Clear canvas and create circular clipping path
-    ctx.clearRect(0, 0, maxSize, maxSize);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(maxSize / 2, maxSize / 2, maxSize / 2, 0, Math.PI * 2);
-    ctx.clip();
-
-    // Calculate source crop area
+    // Calculate dimensions based on crop and scale
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
-    const sourceX = (crop.x * scaleX * image.width) / 100;
-    const sourceY = (crop.y * scaleY * image.height) / 100;
+
+    // Calculate source dimensions
     const sourceWidth = (crop.width * scaleX * image.width) / 100;
     const sourceHeight = (crop.height * scaleY * image.height) / 100;
+    const sourceX = (crop.x * scaleX * image.width) / 100;
+    const sourceY = (crop.y * scaleY * image.height) / 100;
 
-    // Draw image with scaling
+    // Set fixed output size for avatar (200x200)
+    const outputSize = 200;
+    canvas.width = outputSize;
+    canvas.height = outputSize;
+
+    // Apply circular mask
+    ctx.beginPath();
+    ctx.arc(outputSize / 2, outputSize / 2, outputSize / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+
+    // Calculate scaling dimensions while maintaining aspect ratio
+    let scaledWidth = sourceWidth * scale;
+    let scaledHeight = sourceHeight * scale;
+
+    // If scaled dimensions are smaller than output size, adjust them
+    if (scaledWidth < outputSize || scaledHeight < outputSize) {
+      const scaleFactor = outputSize / Math.min(scaledWidth, scaledHeight);
+      scaledWidth *= scaleFactor;
+      scaledHeight *= scaleFactor;
+    }
+
+    // Calculate positioning to center the image
+    const drawX = (outputSize - scaledWidth) / 2;
+    const drawY = (outputSize - scaledHeight) / 2;
+
+    // Draw image with high quality settings
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // Draw scaled and centered image
     ctx.drawImage(
       image,
       sourceX,
       sourceY,
       sourceWidth,
       sourceHeight,
-      0,
-      0,
-      maxSize,
-      maxSize
+      drawX,
+      drawY,
+      scaledWidth,
+      scaledHeight
     );
 
-    // Restore context
-    ctx.restore();
-
-    // Convert to blob
+    // Create file from canvas
     return new Promise((resolve, reject) => {
       canvas.toBlob(
         (blob) => {
