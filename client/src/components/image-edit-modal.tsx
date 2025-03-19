@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import {
@@ -22,19 +22,29 @@ interface ImageEditModalProps {
 export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditModalProps) {
   const [crop, setCrop] = useState<Crop>({
     unit: '%',
-    width: 100,
-    height: 100,
-    x: 0,
-    y: 0
+    width: 90,
+    height: 90,
+    x: 5,
+    y: 5
   });
   const [scale, setScale] = useState(1);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Function to update preview canvas
+  useEffect(() => {
+    if (open && imgRef.current) {
+      console.log("Modal opened, updating preview");
+      updatePreview();
+    }
+  }, [open, crop, scale]);
+
   const updatePreview = () => {
-    if (!imgRef.current || !previewCanvasRef.current || !crop.width || !crop.height) return;
+    console.log("Updating preview", { crop, scale });
+    if (!imgRef.current || !previewCanvasRef.current || !crop.width || !crop.height) {
+      console.log("Missing required refs for preview update");
+      return;
+    }
 
     const canvas = previewCanvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -43,59 +53,31 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
     const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
 
-    const cropX = (crop.x * imgRef.current.width * scaleX) / 100;
-    const cropY = (crop.y * imgRef.current.height * scaleY) / 100;
-    const cropWidth = (crop.width * imgRef.current.width * scaleX) / 100;
-    const cropHeight = (crop.height * imgRef.current.height * scaleY) / 100;
-
+    // Set preview canvas size
     const previewSize = 100;
     canvas.width = previewSize;
     canvas.height = previewSize;
 
+    // Clear and create circular mask
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.beginPath();
     ctx.arc(previewSize / 2, previewSize / 2, previewSize / 2, 0, Math.PI * 2);
     ctx.clip();
 
-    ctx.drawImage(
-      imgRef.current,
-      cropX,
-      cropY,
-      cropWidth,
-      cropHeight,
-      0,
-      0,
-      previewSize,
-      previewSize
-    );
-
-    ctx.restore();
-
-    const newPreviewUrl = canvas.toDataURL();
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    setPreviewUrl(newPreviewUrl);
-  };
-
-    // Draw the preview
+    // Calculate source dimensions based on crop percentages
     const sourceWidth = (crop.width * scaleX * imgRef.current.width) / 100;
     const sourceHeight = (crop.height * scaleY * imgRef.current.height) / 100;
     const sourceX = (crop.x * scaleX * imgRef.current.width) / 100;
     const sourceY = (crop.y * scaleY * imgRef.current.height) / 100;
 
-    // Calculate center portion for the 1:1 aspect ratio
-    const squareSize = Math.min(sourceWidth, sourceHeight);
-    const centerX = sourceX + (sourceWidth - squareSize) / 2;
-    const centerY = sourceY + (sourceHeight - squareSize) / 2;
-
+    // Draw the preview
     ctx.drawImage(
       imgRef.current,
-      centerX,
-      centerY,
-      squareSize,
-      squareSize,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
       0,
       0,
       previewSize,
@@ -106,24 +88,17 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
 
     // Update preview URL
     const newPreviewUrl = canvas.toDataURL();
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
+    console.log("Generated new preview URL");
     setPreviewUrl(newPreviewUrl);
   };
 
   const handleEditComplete = async () => {
     try {
       if (!imgRef.current) return;
+      console.log("Processing final image");
 
       const croppedImage = await getCroppedImg(imgRef.current, crop, scale);
       await onSave(croppedImage);
-
-      // Clean up resources
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-        setPreviewUrl(null);
-      }
       onClose();
     } catch (err) {
       console.error('Failed to process image:', err);
@@ -143,7 +118,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       throw new Error('No 2d context');
     }
 
-    // Set fixed output size for avatar (200x200)
+    // Set fixed output size for avatar
     const outputSize = 200;
     canvas.width = outputSize;
     canvas.height = outputSize;
@@ -154,7 +129,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     ctx.closePath();
     ctx.clip();
 
-    // Calculate scaling dimensions while maintaining aspect ratio
+    // Calculate dimensions
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
 
@@ -164,25 +139,19 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     const sourceX = (crop.x * scaleX * image.width) / 100;
     const sourceY = (crop.y * scaleY * image.height) / 100;
 
-    // Get the center square portion of the 4:3 crop
-    const squareSize = Math.min(sourceWidth, sourceHeight);
-    const centerX = sourceX + (sourceWidth - squareSize) / 2;
-    const centerY = sourceY + (sourceHeight - squareSize) / 2;
-
-    // Draw image centered and scaled
+    // Draw scaled image
     ctx.drawImage(
       image,
-      centerX,
-      centerY,
-      squareSize,
-      squareSize,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
       0,
       0,
       outputSize,
       outputSize
     );
 
-    // Create file from canvas
     return new Promise((resolve, reject) => {
       canvas.toBlob(
         (blob) => {
@@ -214,8 +183,8 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
               <ReactCrop
                 crop={crop}
                 onChange={(c) => {
+                  console.log("Crop changed", c);
                   setCrop(c);
-                  updatePreview();
                 }}
                 aspect={1}
                 circularCrop
@@ -230,7 +199,10 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
                     transform: `scale(${scale})`,
                     transformOrigin: 'center'
                   }}
-                  onLoad={updatePreview}
+                  onLoad={() => {
+                    console.log("Image loaded");
+                    updatePreview();
+                  }}
                 />
               </ReactCrop>
             </div>
@@ -262,8 +234,8 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
               step={0.1}
               value={[scale]}
               onValueChange={([value]) => {
+                console.log("Scale changed", value);
                 setScale(value || 1);
-                updatePreview();
               }}
             />
           </div>
