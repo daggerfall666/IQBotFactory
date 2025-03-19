@@ -1,67 +1,94 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Upload, Image as ImageIcon, Trash2 } from "lucide-react";
+import { Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageEditModal } from "./image-edit-modal";
+import { ImageIcon, Trash2 } from "lucide-react";
+
 
 interface ImageUploadProps {
-  onImageSelected: (file: File | null) => void;
+  onImageSelected: (file: File) => void;
   defaultPreview?: string;
   className?: string;
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
 
 export function ImageUpload({ onImageSelected, defaultPreview, className }: ImageUploadProps) {
   const [preview, setPreview] = useState<string>(defaultPreview || "");
   const [isDragging, setIsDragging] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleFileSelect = (file: File) => {
+  const validateFile = (file: File): boolean => {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast({
+        title: "Tipo de arquivo inválido",
+        description: "Por favor, selecione uma imagem (PNG, JPEG ou GIF)",
+        variant: "destructive"
+      });
+      return false;
+    }
+
     if (file.size > MAX_FILE_SIZE) {
       toast({
-        title: "Erro",
+        title: "Arquivo muito grande",
         description: "A imagem deve ter menos de 5MB",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Tipo de arquivo inválido",
-        description: "Por favor, selecione apenas arquivos de imagem",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Create URL for the edit modal
-    const fileUrl = URL.createObjectURL(file);
-    setSelectedFile(fileUrl);
-    setIsEditModalOpen(true);
+    return true;
   };
 
-  const handleEditComplete = async (editedImage: File) => {
+  const handleFileSelect = async (file: File) => {
+    if (!validateFile(file)) return;
+
     try {
+      setIsLoading(true);
       const reader = new FileReader();
+
       reader.onloadend = () => {
         setPreview(reader.result as string);
-        onImageSelected(editedImage);
+        onImageSelected(file);
+        setIsLoading(false);
       };
-      reader.readAsDataURL(editedImage);
-    } catch (err) {
+
+      reader.onerror = () => {
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar a imagem",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+      };
+
+      reader.readAsDataURL(file);
+    } catch (error) {
       toast({
-        title: "Erro no processamento da imagem",
-        description: err instanceof Error ? err.message : "Falha ao processar a imagem",
+        title: "Erro",
+        description: "Ocorreu um erro ao processar a imagem",
         variant: "destructive"
       });
+      setIsLoading(false);
     }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileSelect(file);
   };
 
   const handleDelete = () => {
@@ -72,42 +99,31 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
     }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      handleFileSelect(file);
-    }
-  };
-
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      handleFileSelect(file);
-    }
-  };
-
   return (
-    <>
+    <div className={`relative ${className}`}>
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept={ALLOWED_TYPES.join(',')}
+        onChange={handleInputChange}
+      />
+
       <motion.div 
-        className={`relative group ${className}`}
+        className="relative group cursor-pointer"
         whileHover={{ scale: 1.02 }}
         transition={{ type: "spring", stiffness: 400, damping: 10 }}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
       >
         <AnimatePresence>
           {preview ? (
@@ -116,10 +132,6 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               className="relative rounded-full overflow-hidden aspect-square w-24 h-24 border"
-              onDragEnter={handleDragEnter}
-              onDragOver={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
             >
               <img
                 src={preview}
@@ -127,7 +139,7 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
                 className="w-full h-full object-cover"
               />
               <motion.div 
-                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                 initial={false}
                 animate={isDragging ? { opacity: 0.7 } : { opacity: 0 }}
               >
@@ -135,71 +147,32 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
                   variant="ghost"
                   size="icon"
                   className="text-white"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-white hover:text-red-400"
                   onClick={handleDelete}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-6 w-6" />
                 </Button>
               </motion.div>
             </motion.div>
           ) : (
             <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              onDragEnter={handleDragEnter}
-              onDragOver={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className={`flex flex-col items-center justify-center w-24 h-24 rounded-full border-2 border-dashed ${
+                isDragging ? 'border-primary' : 'border-muted-foreground/25'
+              } transition-colors`}
             >
-              <Button
-                variant="outline"
-                className={`w-24 h-24 rounded-full flex flex-col items-center justify-center gap-2 border-2 border-dashed transition-colors ${
-                  isDragging ? 'border-primary bg-primary/10' : 'border-muted-foreground/25'
-                }`}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <motion.div
-                  animate={isDragging ? { scale: 1.1 } : { scale: 1 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                >
-                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">
-                    {isDragging ? 'Solte aqui' : 'Upload'}
-                  </span>
-                </motion.div>
-              </Button>
+              <Upload className={`h-6 w-6 ${isDragging ? 'text-primary' : 'text-muted-foreground/25'}`} />
             </motion.div>
           )}
         </AnimatePresence>
-        <Input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFileChange}
-        />
       </motion.div>
 
-      {selectedFile && (
-        <ImageEditModal
-          open={isEditModalOpen}
-          onClose={() => {
-            setIsEditModalOpen(false);
-            setSelectedFile(null);
-            URL.revokeObjectURL(selectedFile);
-          }}
-          imageUrl={selectedFile}
-          onSave={handleEditComplete}
-        />
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+          <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+        </div>
       )}
-    </>
+    </div>
   );
 }

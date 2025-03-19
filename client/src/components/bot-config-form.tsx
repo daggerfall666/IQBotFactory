@@ -482,26 +482,29 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                       <FormLabel>Avatar do Bot</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-4">
-                          <ImageUpload
-                            onImageSelected={(file) => {
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                field.onChange(reader.result as string);
-                              };
-                              reader.readAsDataURL(file);
-                            }}
-                            defaultPreview={field.value}
-                          />
-                          {field.value && (
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="icon"
-                              onClick={() => field.onChange("")}
-                              title="Remover avatar"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                          <div className="flex items-center gap-4">
+                            <ImageUpload
+                              onImageSelected={(file) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  field.onChange(reader.result as string);
+                                };
+                                reader.readAsDataURL(file);
+                              }}
+                              defaultPreview={field.value}
+                            />
+                            {field.value && (
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => field.onChange("")}
+                                title="Remover avatar"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                           )}
                         </div>
                       </FormControl>
