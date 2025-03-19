@@ -28,7 +28,56 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     y: 5
   });
   const [scale, setScale] = useState(1);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Function to update preview canvas
+  const updatePreview = () => {
+    if (!imgRef.current || !previewCanvasRef.current || !crop.width || !crop.height) return;
+
+    const canvas = previewCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
+    const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
+
+    // Set preview canvas size (small for preview)
+    const previewSize = 100;
+    canvas.width = previewSize;
+    canvas.height = previewSize;
+
+    // Clear and create circular mask
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(previewSize / 2, previewSize / 2, previewSize / 2, 0, Math.PI * 2);
+    ctx.clip();
+
+    // Draw the preview
+    const sourceWidth = (crop.width * scaleX * imgRef.current.width) / 100;
+    const sourceHeight = (crop.height * scaleY * imgRef.current.height) / 100;
+    const sourceX = (crop.x * scaleX * imgRef.current.width) / 100;
+    const sourceY = (crop.y * scaleY * imgRef.current.height) / 100;
+
+    ctx.drawImage(
+      imgRef.current,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      previewSize,
+      previewSize
+    );
+
+    ctx.restore();
+
+    // Update preview URL
+    setPreviewUrl(canvas.toDataURL());
+  };
 
   const getCroppedImg = async (
     image: HTMLImageElement,
@@ -116,35 +165,62 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          <div className="flex justify-center">
-            <ReactCrop
-              crop={crop}
-              onChange={(c) => setCrop(c)}
-              aspect={1}
-              circularCrop
-              keepSelection
-            >
-              <img
-                ref={imgRef}
-                src={imageUrl}
-                alt="Imagem para edição"
-                style={{
-                  maxHeight: '400px',
-                  transform: `scale(${scale})`,
-                  transformOrigin: 'center'
+          <div className="flex gap-6">
+            <div className="flex-1">
+              <ReactCrop
+                crop={crop}
+                onChange={(c) => {
+                  setCrop(c);
+                  updatePreview();
                 }}
-              />
-            </ReactCrop>
+                aspect={1}
+                circularCrop
+                keepSelection
+              >
+                <img
+                  ref={imgRef}
+                  src={imageUrl}
+                  alt="Imagem para edição"
+                  style={{
+                    maxHeight: '400px',
+                    transform: `scale(${scale})`,
+                    transformOrigin: 'center'
+                  }}
+                  onLoad={updatePreview}
+                />
+              </ReactCrop>
+            </div>
+
+            <div className="w-[100px] space-y-4">
+              <Label>Preview</Label>
+              <div className="relative w-[100px] h-[100px] rounded-full overflow-hidden bg-muted">
+                {previewUrl ? (
+                  <img 
+                    src={previewUrl} 
+                    alt="Preview" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <canvas 
+                    ref={previewCanvasRef} 
+                    className="w-full h-full"
+                  />
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Zoom</Label>
+            <Label>Zoom ({scale.toFixed(1)}x)</Label>
             <Slider
               min={0.5}
               max={3}
               step={0.1}
               value={[scale]}
-              onValueChange={([value]) => setScale(value || 1)}
+              onValueChange={([value]) => {
+                setScale(value || 1);
+                updatePreview();
+              }}
             />
           </div>
 
