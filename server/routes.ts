@@ -61,6 +61,15 @@ async function getAnthropicClient(apiKey?: string | null) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  try {
+    // Test database connection
+    await db.execute(sql`SELECT 1`);
+    logger.info("Database connection successful");
+  } catch (err) {
+    logger.error("Database connection failed:", err);
+    throw new Error("Failed to connect to database");
+  }
+
   // Increase payload size limit for JSON and URL-encoded bodies to 15MB
   app.use(express.json({ limit: '15mb' }));
   app.use(express.urlencoded({ limit: '15mb', extended: true }));
