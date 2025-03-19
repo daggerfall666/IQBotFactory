@@ -28,24 +28,25 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     y: 10
   });
   const [scale, setScale] = useState(1);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Cleanup function for canvas elements
+  // Initialize crop when image loads
   useEffect(() => {
-    return () => {
-      if (previewCanvasRef.current) {
-        const ctx = previewCanvasRef.current.getContext('2d');
-        if (ctx) {
-          ctx.clearRect(0, 0, previewCanvasRef.current.width, previewCanvasRef.current.height);
-        }
-      }
-      setPreviewUrl(null);
-    };
-  }, []);
+    if (imgRef.current) {
+      const { width, height } = imgRef.current;
+      const size = Math.min(80, (width / height) * 80);
+      setCrop({
+        unit: '%',
+        width: size,
+        height: size,
+        x: (100 - size) / 2,
+        y: (100 - size) / 2
+      });
+    }
+  }, [imageUrl]);
 
-  // Update preview when crop or scale changes
+  // Update preview whenever crop or scale changes
   useEffect(() => {
     if (imgRef.current && crop.width && crop.height) {
       updatePreview();
@@ -77,6 +78,11 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       const sourceY = cropData.y * scaleY;
       const sourceWidth = cropData.width * scaleX;
       const sourceHeight = cropData.height * scaleY;
+
+      // Apply scale transformation
+      ctx.translate(targetSize / 2, targetSize / 2);
+      ctx.scale(scale, scale);
+      ctx.translate(-targetSize / 2, -targetSize / 2);
 
       // Draw the image
       ctx.drawImage(
@@ -121,7 +127,6 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       };
 
       drawCircularCrop(ctx, imgRef.current, cropData, previewSize);
-      setPreviewUrl(canvas.toDataURL());
     } catch (error) {
       console.error('Error updating preview:', error);
     }
@@ -211,15 +216,6 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
                       transformOrigin: 'center'
                     }}
                     className="max-w-full h-auto"
-                    onLoad={() => {
-                      if (imgRef.current) {
-                        // Initialize centered square crop
-                        const size = 80; // 80% of the smaller dimension
-                        const x = (100 - size) / 2;
-                        const y = (100 - size) / 2;
-                        setCrop({ unit: '%', width: size, height: size, x, y });
-                      }
-                    }}
                   />
                 </ReactCrop>
               </div>
@@ -229,18 +225,10 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
               <div>
                 <Label>Preview</Label>
                 <div className="mt-2 relative w-[100px] h-[100px] rounded-full overflow-hidden bg-muted">
-                  {previewUrl ? (
-                    <img 
-                      src={previewUrl} 
-                      alt="Preview" 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <canvas 
-                      ref={previewCanvasRef} 
-                      className="w-full h-full"
-                    />
-                  )}
+                  <canvas 
+                    ref={previewCanvasRef} 
+                    className="w-full h-full"
+                  />
                 </div>
               </div>
 
@@ -265,7 +253,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
               try {
                 if (!imgRef.current) return;
                 const croppedImage = await getCroppedImg(imgRef.current);
-                await onSave(croppedImage);
+                onSave(croppedImage);
                 onClose();
               } catch (error) {
                 console.error('Error saving cropped image:', error);
