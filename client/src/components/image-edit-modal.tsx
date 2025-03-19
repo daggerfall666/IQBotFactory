@@ -60,41 +60,43 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     targetSize: number
   ) => {
     try {
-      // Clear the canvas
+      // Clear the canvas and set dimensions
       ctx.clearRect(0, 0, targetSize, targetSize);
 
-      // Create circular mask
+      // Save the context state
       ctx.save();
+
+      // Create circular mask
       ctx.beginPath();
       ctx.arc(targetSize / 2, targetSize / 2, targetSize / 2, 0, Math.PI * 2);
       ctx.closePath();
       ctx.clip();
 
-      // Calculate source dimensions and preserve aspect ratio
+      // Calculate the scaling factors
       const sourceAspect = cropData.width / cropData.height;
-      const targetAspect = 1; // Circle is always 1:1
+      let scaledWidth = targetSize;
+      let scaledHeight = targetSize;
 
-      let drawWidth = targetSize;
-      let drawHeight = targetSize;
-      let offsetX = 0;
-      let offsetY = 0;
-
-      if (sourceAspect > targetAspect) {
-        // Source is wider than target
-        drawWidth = drawHeight * sourceAspect;
-        offsetX = -(drawWidth - targetSize) / 2;
+      // Adjust dimensions to maintain aspect ratio
+      if (sourceAspect > 1) {
+        scaledHeight = targetSize / sourceAspect;
       } else {
-        // Source is taller than target
-        drawHeight = drawWidth / sourceAspect;
-        offsetY = -(drawHeight - targetSize) / 2;
+        scaledWidth = targetSize * sourceAspect;
       }
 
-      // Apply scale transformation around the center
-      ctx.translate(targetSize / 2, targetSize / 2);
-      ctx.scale(scale, scale);
-      ctx.translate(-targetSize / 2, -targetSize / 2);
+      // Center the image
+      const offsetX = (targetSize - scaledWidth) / 2;
+      const offsetY = (targetSize - scaledHeight) / 2;
 
-      // Draw the image maintaining aspect ratio
+      // Apply the zoom scale
+      const centerX = targetSize / 2;
+      const centerY = targetSize / 2;
+
+      ctx.translate(centerX, centerY);
+      ctx.scale(scale, scale);
+      ctx.translate(-centerX, -centerY);
+
+      // Draw the image
       ctx.drawImage(
         img,
         cropData.x,
@@ -103,10 +105,11 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
         cropData.height,
         offsetX,
         offsetY,
-        drawWidth,
-        drawHeight
+        scaledWidth,
+        scaledHeight
       );
 
+      // Restore the context state
       ctx.restore();
     } catch (error) {
       console.error('Error drawing circular crop:', error);
@@ -128,7 +131,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       canvas.width = previewSize;
       canvas.height = previewSize;
 
-      // Calculate crop coordinates in pixel dimensions
+      // Calculate actual pixel coordinates
       const cropData = {
         x: (crop.x * imgRef.current.width) / 100,
         y: (crop.y * imgRef.current.height) / 100,
@@ -157,7 +160,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       canvas.width = outputSize;
       canvas.height = outputSize;
 
-      // Calculate crop coordinates in pixel dimensions
+      // Calculate actual pixel coordinates for final output
       const cropData = {
         x: (crop.x * image.width) / 100,
         y: (crop.y * image.height) / 100,
