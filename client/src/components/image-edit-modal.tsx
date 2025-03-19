@@ -22,19 +22,19 @@ interface ImageEditModalProps {
 export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditModalProps) {
   const [crop, setCrop] = useState<Crop>({
     unit: '%',
-    width: 100,
-    height: 100,
-    x: 0,
-    y: 0
+    width: 90,
+    height: 90,
+    x: 5,
+    y: 5
   });
   const [scale, setScale] = useState(1);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  const getCroppedImg = (
+  const getCroppedImg = async (
     image: HTMLImageElement,
     crop: Crop,
     scale = 1,
-    fileName = 'cropped.jpg'
+    fileName = 'cropped.png'
   ): Promise<File> => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -43,41 +43,42 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       throw new Error('No 2d context');
     }
 
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
+    // Set desired output size
+    const maxSize = 200; // max size for avatar
+    const size = Math.min(maxSize, image.width);
+    canvas.width = size;
+    canvas.height = size;
 
-    // Set canvas size to desired dimensions (200x200 for avatar)
-    const targetSize = 200;
-    canvas.width = targetSize;
-    canvas.height = targetSize;
-
-    // Make canvas transparent initially
-    ctx.clearRect(0, 0, targetSize, targetSize);
-
-    // Create circular clipping path
+    // Clear canvas and create circular clipping path
+    ctx.clearRect(0, 0, size, size);
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(targetSize / 2, targetSize / 2, targetSize / 2, 0, Math.PI * 2);
-    ctx.closePath();
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
     ctx.clip();
 
-    // Calculate source and destination coordinates
-    const cropX = (crop.x * scaleX) / 100;
-    const cropY = (crop.y * scaleY) / 100;
-    const cropWidth = (crop.width * scaleX * scale) / 100;
-    const cropHeight = (crop.height * scaleY * scale) / 100;
+    // Calculate source crop area
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    const sourceX = (crop.x * scaleX * image.width) / 100;
+    const sourceY = (crop.y * scaleY * image.height) / 100;
+    const sourceWidth = (crop.width * scaleX * image.width * scale) / 100;
+    const sourceHeight = (crop.height * scaleY * image.height * scale) / 100;
 
-    // Draw image with proper scaling and cropping
+    // Draw image with scaling
     ctx.drawImage(
       image,
-      cropX,
-      cropY,
-      cropWidth,
-      cropHeight,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
       0,
       0,
-      targetSize,
-      targetSize
+      size,
+      size
     );
+
+    // Restore context
+    ctx.restore();
 
     // Convert to blob
     return new Promise((resolve, reject) => {
@@ -87,8 +88,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
             reject(new Error('Canvas is empty'));
             return;
           }
-          // Always save as PNG to preserve transparency
-          resolve(new File([blob], fileName.replace(/\.[^/.]+$/, '.png'), { type: 'image/png' }));
+          resolve(new File([blob], fileName, { type: 'image/png' }));
         },
         'image/png',
         1
@@ -125,12 +125,17 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
               onChange={(c) => setCrop(c)}
               aspect={1}
               circularCrop
+              keepSelection
             >
               <img
                 ref={imgRef}
                 src={imageUrl}
-                style={{ maxHeight: '400px' }}
                 alt="Imagem para edição"
+                style={{
+                  maxHeight: '400px',
+                  transform: `scale(${scale})`,
+                  transformOrigin: 'center'
+                }}
               />
             </ReactCrop>
           </div>
