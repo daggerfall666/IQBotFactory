@@ -23,7 +23,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
   // Initial crop is a perfect square
   const [crop, setCrop] = useState<Crop>({
     unit: '%',
-    width: 80, // Slightly smaller to show edges
+    width: 80,
     height: 80,
     x: 10,
     y: 10
@@ -35,16 +35,13 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
 
   // Update preview whenever crop or scale changes
   useEffect(() => {
-    if (open && imgRef.current) {
-      console.log("Updating preview due to changes");
+    if (imgRef.current && crop.width && crop.height) {
       updatePreview();
     }
-  }, [crop, scale, open]);
+  }, [crop, scale]);
 
   const updatePreview = () => {
-    console.log("Running preview update");
     if (!imgRef.current || !previewCanvasRef.current || !crop.width || !crop.height) {
-      console.log("Missing refs for preview");
       return;
     }
 
@@ -90,9 +87,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     ctx.restore();
 
     // Update preview URL
-    const newPreviewUrl = canvas.toDataURL();
-    setPreviewUrl(newPreviewUrl);
-    console.log("Preview updated");
+    setPreviewUrl(canvas.toDataURL());
   };
 
   const getCroppedImg = async (
@@ -168,7 +163,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
 
         <div className="space-y-6 py-4">
           <div className="flex gap-6">
-            <div className="flex-1">
+            <div className="flex-1 flex items-center justify-center bg-muted rounded-lg overflow-hidden">
               <ReactCrop
                 crop={crop}
                 onChange={(c) => {
@@ -179,12 +174,11 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
                     width: size,
                     height: size
                   };
-                  console.log("Crop changed", newCrop);
                   setCrop(newCrop);
                 }}
                 aspect={1}
-                className="!block !rounded-none" // Force square appearance
-                ruleOfThirds
+                circularCrop
+                className="max-h-[400px] w-auto"
               >
                 <img
                   ref={imgRef}
@@ -195,10 +189,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
                     transform: `scale(${scale})`,
                     transformOrigin: 'center'
                   }}
-                  onLoad={() => {
-                    console.log("Image loaded");
-                    updatePreview();
-                  }}
+                  className="max-w-none"
                 />
               </ReactCrop>
             </div>
@@ -230,7 +221,6 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
               step={0.1}
               value={[scale]}
               onValueChange={([value]) => {
-                console.log("Scale changed", value);
                 setScale(value || 1);
               }}
             />
