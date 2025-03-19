@@ -70,31 +70,41 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       ctx.closePath();
       ctx.clip();
 
-      // Calculate source dimensions
-      const scaleX = img.naturalWidth / img.width;
-      const scaleY = img.naturalHeight / img.height;
+      // Calculate source dimensions and preserve aspect ratio
+      const sourceAspect = cropData.width / cropData.height;
+      const targetAspect = 1; // Circle is always 1:1
 
-      const sourceX = cropData.x * scaleX;
-      const sourceY = cropData.y * scaleY;
-      const sourceWidth = cropData.width * scaleX;
-      const sourceHeight = cropData.height * scaleY;
+      let drawWidth = targetSize;
+      let drawHeight = targetSize;
+      let offsetX = 0;
+      let offsetY = 0;
 
-      // Apply scale transformation
+      if (sourceAspect > targetAspect) {
+        // Source is wider than target
+        drawWidth = drawHeight * sourceAspect;
+        offsetX = -(drawWidth - targetSize) / 2;
+      } else {
+        // Source is taller than target
+        drawHeight = drawWidth / sourceAspect;
+        offsetY = -(drawHeight - targetSize) / 2;
+      }
+
+      // Apply scale transformation around the center
       ctx.translate(targetSize / 2, targetSize / 2);
       ctx.scale(scale, scale);
       ctx.translate(-targetSize / 2, -targetSize / 2);
 
-      // Draw the image
+      // Draw the image maintaining aspect ratio
       ctx.drawImage(
         img,
-        sourceX,
-        sourceY,
-        sourceWidth,
-        sourceHeight,
-        0,
-        0,
-        targetSize,
-        targetSize
+        cropData.x,
+        cropData.y,
+        cropData.width,
+        cropData.height,
+        offsetX,
+        offsetY,
+        drawWidth,
+        drawHeight
       );
 
       ctx.restore();
@@ -118,7 +128,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       canvas.width = previewSize;
       canvas.height = previewSize;
 
-      // Calculate crop coordinates in display dimensions
+      // Calculate crop coordinates in pixel dimensions
       const cropData = {
         x: (crop.x * imgRef.current.width) / 100,
         y: (crop.y * imgRef.current.height) / 100,
@@ -147,7 +157,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       canvas.width = outputSize;
       canvas.height = outputSize;
 
-      // Calculate crop coordinates in display dimensions
+      // Calculate crop coordinates in pixel dimensions
       const cropData = {
         x: (crop.x * image.width) / 100,
         y: (crop.y * image.height) / 100,
