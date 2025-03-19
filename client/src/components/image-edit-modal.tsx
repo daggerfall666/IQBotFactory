@@ -56,47 +56,46 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
   const drawCircularCrop = (
     ctx: CanvasRenderingContext2D,
     img: HTMLImageElement,
-    cropData: { x: number; y: number; width: number; height: number },
+    pixelCrop: { x: number; y: number; width: number; height: number },
     targetSize: number
   ) => {
     try {
-      // Clear the canvas and set dimensions
+      // Clear the canvas
       ctx.clearRect(0, 0, targetSize, targetSize);
 
-      // Save the context state
-      ctx.save();
-
       // Create circular mask
+      ctx.save();
       ctx.beginPath();
       ctx.arc(targetSize / 2, targetSize / 2, targetSize / 2, 0, Math.PI * 2);
-      ctx.closePath();
       ctx.clip();
 
-      // Apply the zoom scale from the center
-      const centerX = targetSize / 2;
-      const centerY = targetSize / 2;
-      ctx.translate(centerX, centerY);
-      ctx.scale(scale, scale);
-      ctx.translate(-centerX, -centerY);
+      // Calculate the scale to fit the crop area into the target size
+      const scaleX = targetSize / pixelCrop.width;
+      const scaleY = targetSize / pixelCrop.height;
+      const scale = Math.max(scaleX, scaleY);
 
-      // Draw the cropped area in the center of the canvas
+      // Calculate centered position
+      const scaledWidth = pixelCrop.width * scale;
+      const scaledHeight = pixelCrop.height * scale;
+      const dx = (targetSize - scaledWidth) / 2;
+      const dy = (targetSize - scaledHeight) / 2;
+
+      // Draw the cropped portion
       ctx.drawImage(
         img,
-        cropData.x,
-        cropData.y,
-        cropData.width,
-        cropData.height,
-        0,
-        0,
-        targetSize,
-        targetSize
+        pixelCrop.x,
+        pixelCrop.y,
+        pixelCrop.width,
+        pixelCrop.height,
+        dx,
+        dy,
+        scaledWidth,
+        scaledHeight
       );
 
-      // Restore the context state
       ctx.restore();
     } catch (error) {
-      console.error('Error drawing circular crop:', error);
-      throw new Error('Failed to draw circular crop');
+      console.error('Error drawing crop:', error);
     }
   };
 
@@ -105,71 +104,60 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       return;
     }
 
-    try {
-      const canvas = previewCanvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+    const canvas = previewCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-      const previewSize = 100;
-      canvas.width = previewSize;
-      canvas.height = previewSize;
+    const previewSize = 100;
+    canvas.width = previewSize;
+    canvas.height = previewSize;
 
-      // Calculate actual pixel coordinates of the crop area
-      const cropData = {
-        x: (crop.x * imgRef.current.width) / 100,
-        y: (crop.y * imgRef.current.height) / 100,
-        width: (crop.width * imgRef.current.width) / 100,
-        height: (crop.height * imgRef.current.height) / 100
-      };
+    // Convert percentage crop to pixel values
+    const pixelCrop = {
+      x: (crop.x / 100) * imgRef.current.width,
+      y: (crop.y / 100) * imgRef.current.height,
+      width: (crop.width / 100) * imgRef.current.width,
+      height: (crop.height / 100) * imgRef.current.height
+    };
 
-      drawCircularCrop(ctx, imgRef.current, cropData, previewSize);
-    } catch (error) {
-      console.error('Error updating preview:', error);
-    }
+    drawCircularCrop(ctx, imgRef.current, pixelCrop, previewSize);
   };
 
-  const getCroppedImg = async (
-    image: HTMLImageElement,
-    fileName = 'cropped.png'
-  ): Promise<File> => {
+  const getCroppedImg = async (image: HTMLImageElement): Promise<File> => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       throw new Error('No 2d context');
     }
 
-    try {
-      const outputSize = 200;
-      canvas.width = outputSize;
-      canvas.height = outputSize;
+    // Set output size
+    const size = 200;
+    canvas.width = size;
+    canvas.height = size;
 
-      // Calculate actual pixel coordinates for final output
-      const cropData = {
-        x: (crop.x * image.width) / 100,
-        y: (crop.y * image.height) / 100,
-        width: (crop.width * image.width) / 100,
-        height: (crop.height * image.height) / 100
-      };
+    // Convert percentage to pixels for final output
+    const pixelCrop = {
+      x: (crop.x / 100) * image.width,
+      y: (crop.y / 100) * image.height,
+      width: (crop.width / 100) * image.width,
+      height: (crop.height / 100) * image.height
+    };
 
-      drawCircularCrop(ctx, image, cropData, outputSize);
+    drawCircularCrop(ctx, image, pixelCrop, size);
 
-      return new Promise((resolve, reject) => {
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              reject(new Error('Canvas is empty'));
-              return;
-            }
-            resolve(new File([blob], fileName, { type: 'image/png' }));
-          },
-          'image/png',
-          1
-        );
-      });
-    } catch (error) {
-      console.error('Error getting cropped image:', error);
-      throw new Error('Failed to generate cropped image');
-    }
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('Canvas is empty'));
+            return;
+          }
+          resolve(new File([blob], 'avatar.png', { type: 'image/png' }));
+        },
+        'image/png',
+        1
+      );
+    });
   };
 
   return (
