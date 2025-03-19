@@ -61,12 +61,17 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     const sourceX = (crop.x * scaleX * imgRef.current.width) / 100;
     const sourceY = (crop.y * scaleY * imgRef.current.height) / 100;
 
+    // Calculate center portion for the 1:1 aspect ratio
+    const squareSize = Math.min(sourceWidth, sourceHeight);
+    const centerX = sourceX + (sourceWidth - squareSize) / 2;
+    const centerY = sourceY + (sourceHeight - squareSize) / 2;
+
     ctx.drawImage(
       imgRef.current,
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
+      centerX,
+      centerY,
+      squareSize,
+      squareSize,
       0,
       0,
       previewSize,
@@ -77,6 +82,18 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
 
     // Update preview URL
     setPreviewUrl(canvas.toDataURL());
+  };
+
+  const handleEditComplete = async () => {
+    try {
+      if (imgRef.current) {
+        const croppedImage = await getCroppedImg(imgRef.current, crop, scale);
+        onSave(croppedImage);
+        onClose();
+      }
+    } catch (err) {
+      console.error('Failed to process image:', err);
+    }
   };
 
   const getCroppedImg = async (
@@ -113,13 +130,18 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     const sourceX = (crop.x * scaleX * image.width) / 100;
     const sourceY = (crop.y * scaleY * image.height) / 100;
 
-    // Calculate positioning to center the image
+    // Get the center square portion of the 4:3 crop
+    const squareSize = Math.min(sourceWidth, sourceHeight);
+    const centerX = sourceX + (sourceWidth - squareSize) / 2;
+    const centerY = sourceY + (sourceHeight - squareSize) / 2;
+
+    // Draw image centered and scaled
     ctx.drawImage(
       image,
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
+      centerX,
+      centerY,
+      squareSize,
+      squareSize,
       0,
       0,
       outputSize,
@@ -142,18 +164,6 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     });
   };
 
-  const handleSave = async () => {
-    try {
-      if (imgRef.current) {
-        const croppedImage = await getCroppedImg(imgRef.current, crop, scale);
-        onSave(croppedImage);
-        onClose();
-      }
-    } catch (err) {
-      console.error('Failed to process image:', err);
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
@@ -173,8 +183,8 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
                   setCrop(c);
                   updatePreview();
                 }}
-                aspect={1}
-                circularCrop
+                aspect={4/3}
+                circularCrop={false}
                 keepSelection
               >
                 <img
@@ -228,7 +238,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
             <Button variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button onClick={handleSave}>
+            <Button onClick={handleEditComplete}>
               Salvar
             </Button>
           </div>
