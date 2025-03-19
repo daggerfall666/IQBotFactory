@@ -193,8 +193,8 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
                   setCrop(c);
                   updatePreview();
                 }}
-                aspect={4/3}
-                circularCrop={false}
+                aspect={1}
+                circularCrop
                 keepSelection
               >
                 <img
