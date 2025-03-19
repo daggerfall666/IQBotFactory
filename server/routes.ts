@@ -61,9 +61,9 @@ async function getAnthropicClient(apiKey?: string | null) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Increase payload size limit for JSON and URL-encoded bodies
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+  // Increase payload size limit for JSON and URL-encoded bodies to 15MB
+  app.use(express.json({ limit: '15mb' }));
+  app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
   // Apply general API rate limiting to all /api routes
   app.use('/api', apiLimiter);

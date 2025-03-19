@@ -12,6 +12,7 @@ interface ImageUploadProps {
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const TARGET_SIZE = 300; // Reduced from 400 to 300px for better performance
 
 export function ImageUpload({ onImageSelected, defaultPreview, className }: ImageUploadProps) {
   const [preview, setPreview] = useState<string>(defaultPreview || "");
@@ -29,10 +30,9 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
         // Determine size for square crop
         const size = Math.min(img.width, img.height);
 
-        // Set canvas to final dimensions (we'll use 400x400 for high quality avatars)
-        const finalSize = 400;
-        canvas.width = finalSize;
-        canvas.height = finalSize;
+        // Set canvas to final dimensions
+        canvas.width = TARGET_SIZE;
+        canvas.height = TARGET_SIZE;
 
         if (!ctx) {
           reject(new Error('Failed to get canvas context'));
@@ -40,11 +40,11 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
         }
 
         // Make canvas transparent initially
-        ctx.clearRect(0, 0, finalSize, finalSize);
+        ctx.clearRect(0, 0, TARGET_SIZE, TARGET_SIZE);
 
         // Create circular clipping path
         ctx.beginPath();
-        ctx.arc(finalSize / 2, finalSize / 2, finalSize / 2, 0, Math.PI * 2);
+        ctx.arc(TARGET_SIZE / 2, TARGET_SIZE / 2, TARGET_SIZE / 2, 0, Math.PI * 2);
         ctx.closePath();
         ctx.clip();
 
@@ -56,24 +56,35 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
         ctx.drawImage(
           img,
           sourceX, sourceY, size, size, // Source rectangle
-          0, 0, finalSize, finalSize    // Destination rectangle
+          0, 0, TARGET_SIZE, TARGET_SIZE    // Destination rectangle
         );
 
-        // Determine output format based on input
+        // Determine output format and quality
         const isPNG = file.type === 'image/png';
         const outputFormat = isPNG ? 'image/png' : 'image/jpeg';
-        const quality = isPNG ? undefined : 0.9;
+        const quality = isPNG ? undefined : 0.85; // Reduced quality for better compression
 
-        canvas.toBlob((blob) => {
-          if (blob) {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Failed to create image blob'));
+              return;
+            }
+
+            // Verify final size
+            if (blob.size > MAX_FILE_SIZE) {
+              reject(new Error('Image too large after optimization'));
+              return;
+            }
+
             resolve(new File([blob], file.name.replace(/\.[^/.]+$/, isPNG ? '.png' : '.jpg'), {
               type: outputFormat,
               lastModified: Date.now(),
             }));
-          } else {
-            reject(new Error('Failed to create image blob'));
-          }
-        }, outputFormat, quality);
+          },
+          outputFormat,
+          quality
+        );
       };
 
       img.onerror = () => reject(new Error('Failed to load image'));
@@ -82,27 +93,30 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
   };
 
   const processFile = async (file: File) => {
-    if (file.size > MAX_FILE_SIZE) {
-      toast({
-        title: "Erro",
-        description: "A imagem deve ter menos de 5MB",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
+      // Check initial file size
+      if (file.size > MAX_FILE_SIZE * 2) { // Allow slightly larger initial files
+        throw new Error('Image file is too large');
+      }
+
       const optimizedFile = await optimizeImage(file);
       const reader = new FileReader();
+
       reader.onloadend = () => {
-        setPreview(reader.result as string);
+        const result = reader.result as string;
+        // Verify data URL size
+        if (result.length > MAX_FILE_SIZE * 1.37) { // Account for base64 overhead
+          throw new Error('Optimized image is still too large');
+        }
+        setPreview(result);
+        onImageSelected(optimizedFile);
       };
+
       reader.readAsDataURL(optimizedFile);
-      onImageSelected(optimizedFile);
     } catch (err) {
       toast({
-        title: "Erro",
-        description: "Falha ao processar a imagem",
+        title: "Erro no processamento da imagem",
+        description: err instanceof Error ? err.message : "Falha ao processar a imagem",
         variant: "destructive"
       });
     }
@@ -111,6 +125,16 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Tipo de arquivo inválido",
+        description: "Por favor, selecione apenas arquivos de imagem",
+        variant: "destructive"
+      });
+      return;
+    }
+
     await processFile(file);
   };
 
