@@ -32,6 +32,20 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
   const imgRef = useRef<HTMLImageElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Cleanup function for canvas elements
+  useEffect(() => {
+    return () => {
+      if (previewCanvasRef.current) {
+        const ctx = previewCanvasRef.current.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, previewCanvasRef.current.width, previewCanvasRef.current.height);
+        }
+      }
+      setPreviewUrl(null);
+    };
+  }, []);
+
+  // Update preview when crop or scale changes
   useEffect(() => {
     if (imgRef.current && crop.width && crop.height) {
       updatePreview();
@@ -44,39 +58,44 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     cropData: { x: number; y: number; width: number; height: number },
     targetSize: number
   ) => {
-    // Clear the canvas
-    ctx.clearRect(0, 0, targetSize, targetSize);
+    try {
+      // Clear the canvas
+      ctx.clearRect(0, 0, targetSize, targetSize);
 
-    // Create circular mask
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(targetSize / 2, targetSize / 2, targetSize / 2, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
+      // Create circular mask
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(targetSize / 2, targetSize / 2, targetSize / 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
 
-    // Calculate source dimensions
-    const scaleX = img.naturalWidth / img.width;
-    const scaleY = img.naturalHeight / img.height;
+      // Calculate source dimensions
+      const scaleX = img.naturalWidth / img.width;
+      const scaleY = img.naturalHeight / img.height;
 
-    const sourceX = cropData.x * scaleX;
-    const sourceY = cropData.y * scaleY;
-    const sourceWidth = cropData.width * scaleX;
-    const sourceHeight = cropData.height * scaleY;
+      const sourceX = cropData.x * scaleX;
+      const sourceY = cropData.y * scaleY;
+      const sourceWidth = cropData.width * scaleX;
+      const sourceHeight = cropData.height * scaleY;
 
-    // Draw the image
-    ctx.drawImage(
-      img,
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
-      0,
-      0,
-      targetSize,
-      targetSize
-    );
+      // Draw the image
+      ctx.drawImage(
+        img,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        0,
+        0,
+        targetSize,
+        targetSize
+      );
 
-    ctx.restore();
+      ctx.restore();
+    } catch (error) {
+      console.error('Error drawing circular crop:', error);
+      throw new Error('Failed to draw circular crop');
+    }
   };
 
   const updatePreview = () => {
@@ -84,24 +103,28 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       return;
     }
 
-    const canvas = previewCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    try {
+      const canvas = previewCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    const previewSize = 100;
-    canvas.width = previewSize;
-    canvas.height = previewSize;
+      const previewSize = 100;
+      canvas.width = previewSize;
+      canvas.height = previewSize;
 
-    // Calculate crop coordinates in display dimensions
-    const cropData = {
-      x: (crop.x * imgRef.current.width) / 100,
-      y: (crop.y * imgRef.current.height) / 100,
-      width: (crop.width * imgRef.current.width) / 100,
-      height: (crop.height * imgRef.current.height) / 100
-    };
+      // Calculate crop coordinates in display dimensions
+      const cropData = {
+        x: (crop.x * imgRef.current.width) / 100,
+        y: (crop.y * imgRef.current.height) / 100,
+        width: (crop.width * imgRef.current.width) / 100,
+        height: (crop.height * imgRef.current.height) / 100
+      };
 
-    drawCircularCrop(ctx, imgRef.current, cropData, previewSize);
-    setPreviewUrl(canvas.toDataURL());
+      drawCircularCrop(ctx, imgRef.current, cropData, previewSize);
+      setPreviewUrl(canvas.toDataURL());
+    } catch (error) {
+      console.error('Error updating preview:', error);
+    }
   };
 
   const getCroppedImg = async (
@@ -114,33 +137,41 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       throw new Error('No 2d context');
     }
 
-    const outputSize = 200;
-    canvas.width = outputSize;
-    canvas.height = outputSize;
+    try {
+      const outputSize = 200;
+      canvas.width = outputSize;
+      canvas.height = outputSize;
 
-    // Calculate crop coordinates in display dimensions
-    const cropData = {
-      x: (crop.x * image.width) / 100,
-      y: (crop.y * image.height) / 100,
-      width: (crop.width * image.width) / 100,
-      height: (crop.height * image.height) / 100
-    };
+      // Calculate crop coordinates in display dimensions
+      const cropData = {
+        x: (crop.x * image.width) / 100,
+        y: (crop.y * image.height) / 100,
+        width: (crop.width * image.width) / 100,
+        height: (crop.height * image.height) / 100
+      };
 
-    drawCircularCrop(ctx, image, cropData, outputSize);
+      drawCircularCrop(ctx, image, cropData, outputSize);
 
-    return new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            reject(new Error('Canvas is empty'));
-            return;
-          }
-          resolve(new File([blob], fileName, { type: 'image/png' }));
-        },
-        'image/png',
-        1
-      );
-    });
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Canvas is empty'));
+              return;
+            }
+            resolve(new File([blob], fileName, { type: 'image/png' }));
+          },
+          'image/png',
+          1
+        );
+      });
+    } catch (error) {
+      console.error('Error getting cropped image:', error);
+      throw new Error('Failed to generate cropped image');
+    } finally {
+      // Cleanup
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
   };
 
   return (

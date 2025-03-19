@@ -4,10 +4,10 @@ import { Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageEditModal } from "./image-edit-modal";
-import { ImageIcon, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 interface ImageUploadProps {
-  onImageSelected: (file: File) => void;
+  onImageSelected: (file: File | null) => void;
   defaultPreview?: string;
   className?: string;
 }
@@ -55,8 +55,18 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
 
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreview(reader.result as string);
-        setIsEditModalOpen(true);
+        if (reader.result && typeof reader.result === 'string') {
+          setPreview(reader.result);
+          setIsEditModalOpen(true);
+        }
+        setIsLoading(false);
+      };
+      reader.onerror = () => {
+        toast({
+          title: "Erro",
+          description: "Ocorreu um erro ao ler o arquivo",
+          variant: "destructive"
+        });
         setIsLoading(false);
       };
       reader.readAsDataURL(file);
@@ -75,10 +85,11 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
     onImageSelected(editedFile);
     setIsEditModalOpen(false);
 
-    // Update preview
     const reader = new FileReader();
     reader.onloadend = () => {
-      setPreview(reader.result as string);
+      if (reader.result && typeof reader.result === 'string') {
+        setPreview(reader.result);
+      }
     };
     reader.readAsDataURL(editedFile);
   };
@@ -99,7 +110,7 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
   const handleDelete = () => {
     setPreview("");
     setSelectedFile(null);
-    onImageSelected(null as any);
+    onImageSelected(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
