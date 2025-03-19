@@ -25,8 +25,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     width: 100,
     height: 100,
     x: 0,
-    y: 0,
-    aspect: 1
+    y: 0
   });
   const [scale, setScale] = useState(1);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -88,7 +87,8 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
             reject(new Error('Canvas is empty'));
             return;
           }
-          resolve(new File([blob], fileName, { type: 'image/png' }));
+          // Always save as PNG to preserve transparency
+          resolve(new File([blob], fileName.replace(/\.[^/.]+$/, '.png'), { type: 'image/png' }));
         },
         'image/png',
         1
@@ -117,7 +117,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
             Ajuste o recorte e o tamanho da imagem para seu avatar
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-6 py-4">
           <div className="flex justify-center">
             <ReactCrop
@@ -142,7 +142,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
               max={3}
               step={0.1}
               value={[scale]}
-              onValueChange={([value]) => setScale(value)}
+              onValueChange={([value]) => setScale(value || 1)}
             />
           </div>
 

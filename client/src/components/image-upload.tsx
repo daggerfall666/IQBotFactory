@@ -1,13 +1,13 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, Image as ImageIcon } from "lucide-react";
+import { Upload, Image as ImageIcon, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageEditModal } from "./image-edit-modal";
 
 interface ImageUploadProps {
-  onImageSelected: (file: File) => void;
+  onImageSelected: (file: File | null) => void;
   defaultPreview?: string;
   className?: string;
 }
@@ -23,10 +23,10 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
   const { toast } = useToast();
 
   const handleFileSelect = (file: File) => {
-    if (file.size > MAX_FILE_SIZE * 2) {
+    if (file.size > MAX_FILE_SIZE) {
       toast({
         title: "Erro",
-        description: "A imagem deve ter menos de 10MB",
+        description: "A imagem deve ter menos de 5MB",
         variant: "destructive"
       });
       return;
@@ -61,6 +61,14 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
         description: err instanceof Error ? err.message : "Falha ao processar a imagem",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleDelete = () => {
+    setPreview("");
+    onImageSelected(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -119,7 +127,7 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
                 className="w-full h-full object-cover"
               />
               <motion.div 
-                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
                 initial={false}
                 animate={isDragging ? { opacity: 0.7 } : { opacity: 0 }}
               >
@@ -130,6 +138,14 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Upload className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:text-red-400"
+                  onClick={handleDelete}
+                >
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </motion.div>
             </motion.div>
@@ -178,6 +194,7 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
           onClose={() => {
             setIsEditModalOpen(false);
             setSelectedFile(null);
+            URL.revokeObjectURL(selectedFile);
           }}
           imageUrl={selectedFile}
           onSave={handleEditComplete}
