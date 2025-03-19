@@ -484,11 +484,15 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                         <div className="flex items-center gap-4">
                           <ImageUpload
                             onImageSelected={(file) => {
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                field.onChange(reader.result as string);
-                              };
-                              reader.readAsDataURL(file);
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  field.onChange(reader.result as string);
+                                };
+                                reader.readAsDataURL(file);
+                              } else {
+                                field.onChange("");
+                              }
                             }}
                             defaultPreview={field.value}
                           />
