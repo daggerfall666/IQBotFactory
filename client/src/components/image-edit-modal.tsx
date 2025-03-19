@@ -40,43 +40,6 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     }
   }, [crop, scale]);
 
-  const drawCircularImage = (
-    ctx: CanvasRenderingContext2D,
-    image: HTMLImageElement,
-    sourceX: number,
-    sourceY: number,
-    sourceWidth: number,
-    sourceHeight: number,
-    destWidth: number,
-    destHeight: number
-  ) => {
-    // Create circular clipping path
-    ctx.beginPath();
-    ctx.arc(destWidth / 2, destHeight / 2, destWidth / 2, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
-
-    // Calculate dimensions to maintain aspect ratio
-    const scale = Math.max(destWidth / sourceWidth, destHeight / sourceHeight);
-    const scaledWidth = sourceWidth * scale;
-    const scaledHeight = sourceHeight * scale;
-    const x = (destWidth - scaledWidth) / 2;
-    const y = (destHeight - scaledHeight) / 2;
-
-    // Draw the image
-    ctx.drawImage(
-      image,
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
-      x,
-      y,
-      scaledWidth,
-      scaledHeight
-    );
-  };
-
   const updatePreview = () => {
     if (!imgRef.current || !previewCanvasRef.current || !crop.width || !crop.height) return;
 
@@ -93,6 +56,12 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     ctx.clearRect(0, 0, previewSize, previewSize);
     ctx.save();
 
+    // Create circular clipping path
+    ctx.beginPath();
+    ctx.arc(previewSize / 2, previewSize / 2, previewSize / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+
     // Calculate dimensions
     const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
     const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
@@ -102,14 +71,15 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     const sourceX = (crop.x * scaleX * imgRef.current.width) / 100;
     const sourceY = (crop.y * scaleY * imgRef.current.height) / 100;
 
-    // Draw circular preview
-    drawCircularImage(
-      ctx,
+    // Draw the preview
+    ctx.drawImage(
       imgRef.current,
       sourceX,
       sourceY,
       sourceWidth,
       sourceHeight,
+      0,
+      0,
       previewSize,
       previewSize
     );
@@ -136,6 +106,14 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     canvas.width = outputSize;
     canvas.height = outputSize;
 
+    // Clear canvas and create circular mask
+    ctx.clearRect(0, 0, outputSize, outputSize);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(outputSize / 2, outputSize / 2, outputSize / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+
     // Calculate dimensions
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
@@ -145,31 +123,38 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     const sourceX = (crop.x * scaleX * image.width) / 100;
     const sourceY = (crop.y * scaleY * image.height) / 100;
 
-    // Draw final circular image
-    drawCircularImage(
-      ctx,
-      image,
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
-      outputSize,
-      outputSize
-    );
-
-    return new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            reject(new Error('Canvas is empty'));
-            return;
-          }
-          resolve(new File([blob], fileName, { type: 'image/png' }));
-        },
-        'image/png',
-        1
+    // Draw the image
+    try {
+      ctx.drawImage(
+        image,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        0,
+        0,
+        outputSize,
+        outputSize
       );
-    });
+      ctx.restore();
+
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Canvas is empty'));
+              return;
+            }
+            resolve(new File([blob], fileName, { type: 'image/png' }));
+          },
+          'image/png',
+          1
+        );
+      });
+    } catch (error) {
+      console.error('Error drawing image:', error);
+      throw error;
+    }
   };
 
   return (
