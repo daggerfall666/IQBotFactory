@@ -40,53 +40,81 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     }
   }, [crop, scale]);
 
+  const drawCircularImage = (
+    ctx: CanvasRenderingContext2D,
+    image: HTMLImageElement,
+    sourceX: number,
+    sourceY: number,
+    sourceWidth: number,
+    sourceHeight: number,
+    destWidth: number,
+    destHeight: number
+  ) => {
+    // Create circular clipping path
+    ctx.beginPath();
+    ctx.arc(destWidth / 2, destHeight / 2, destWidth / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+
+    // Calculate dimensions to maintain aspect ratio
+    const scale = Math.max(destWidth / sourceWidth, destHeight / sourceHeight);
+    const scaledWidth = sourceWidth * scale;
+    const scaledHeight = sourceHeight * scale;
+    const x = (destWidth - scaledWidth) / 2;
+    const y = (destHeight - scaledHeight) / 2;
+
+    // Draw the image
+    ctx.drawImage(
+      image,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      x,
+      y,
+      scaledWidth,
+      scaledHeight
+    );
+  };
+
   const updatePreview = () => {
-    if (!imgRef.current || !previewCanvasRef.current || !crop.width || !crop.height) {
-      return;
-    }
+    if (!imgRef.current || !previewCanvasRef.current || !crop.width || !crop.height) return;
 
     const canvas = previewCanvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set preview canvas size (fixed square for avatar preview)
+    // Set preview size
     const previewSize = 100;
     canvas.width = previewSize;
     canvas.height = previewSize;
 
-    // Clear canvas and create circular mask
+    // Clear canvas
     ctx.clearRect(0, 0, previewSize, previewSize);
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(previewSize / 2, previewSize / 2, previewSize / 2, 0, Math.PI * 2);
-    ctx.clip();
 
     // Calculate dimensions
     const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
     const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
 
-    // Calculate source dimensions
     const sourceWidth = (crop.width * scaleX * imgRef.current.width) / 100;
     const sourceHeight = (crop.height * scaleY * imgRef.current.height) / 100;
     const sourceX = (crop.x * scaleX * imgRef.current.width) / 100;
     const sourceY = (crop.y * scaleY * imgRef.current.height) / 100;
 
-    // Draw preview
-    ctx.drawImage(
+    // Draw circular preview
+    drawCircularImage(
+      ctx,
       imgRef.current,
       sourceX,
       sourceY,
       sourceWidth,
       sourceHeight,
-      0,
-      0,
       previewSize,
       previewSize
     );
 
     ctx.restore();
-
-    // Update preview URL
     setPreviewUrl(canvas.toDataURL());
   };
 
@@ -103,35 +131,28 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
       throw new Error('No 2d context');
     }
 
-    // Fixed output size for avatar
+    // Set output size
     const outputSize = 200;
     canvas.width = outputSize;
     canvas.height = outputSize;
-
-    // Create circular mask
-    ctx.beginPath();
-    ctx.arc(outputSize / 2, outputSize / 2, outputSize / 2, 0, Math.PI * 2);
-    ctx.clip();
 
     // Calculate dimensions
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
 
-    // Calculate source dimensions
     const sourceWidth = (crop.width * scaleX * image.width) / 100;
     const sourceHeight = (crop.height * scaleY * image.height) / 100;
     const sourceX = (crop.x * scaleX * image.width) / 100;
     const sourceY = (crop.y * scaleY * image.height) / 100;
 
-    // Draw final image
-    ctx.drawImage(
+    // Draw final circular image
+    drawCircularImage(
+      ctx,
       image,
       sourceX,
       sourceY,
       sourceWidth,
       sourceHeight,
-      0,
-      0,
       outputSize,
       outputSize
     );
@@ -190,6 +211,7 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
                     transformOrigin: 'center'
                   }}
                   className="max-w-none"
+                  onLoad={updatePreview}
                 />
               </ReactCrop>
             </div>
