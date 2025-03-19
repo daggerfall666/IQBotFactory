@@ -81,16 +81,26 @@ export function ImageEditModal({ open, onClose, imageUrl, onSave }: ImageEditMod
     ctx.restore();
 
     // Update preview URL
-    setPreviewUrl(canvas.toDataURL());
+    const newPreviewUrl = canvas.toDataURL();
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(newPreviewUrl);
   };
 
   const handleEditComplete = async () => {
     try {
-      if (imgRef.current) {
-        const croppedImage = await getCroppedImg(imgRef.current, crop, scale);
-        onSave(croppedImage);
-        onClose();
+      if (!imgRef.current) return;
+
+      const croppedImage = await getCroppedImg(imgRef.current, crop, scale);
+      await onSave(croppedImage);
+
+      // Clean up resources
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
       }
+      onClose();
     } catch (err) {
       console.error('Failed to process image:', err);
     }
