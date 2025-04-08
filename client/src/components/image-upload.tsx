@@ -9,7 +9,7 @@ import { imageCache } from "@/lib/imageCache";
 
 interface ImageUploadProps {
   onImageSelected: (file: File | null) => void;
-  defaultPreview?: string;
+  defaultPreview?: string | undefined;
   className?: string;
 }
 

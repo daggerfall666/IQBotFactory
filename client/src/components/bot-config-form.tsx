@@ -288,7 +288,11 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                         <FormControl>
                           <Input
                             type="password"
-                            {...field}
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                             placeholder="sk-ant-..."
                             className="font-mono"
                           />
@@ -337,9 +341,25 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                               </SelectItem>
                             ))}
                           </SelectGroup>
+                          {/* Gemini 1.5 Models */}
                           <SelectGroup>
-                            <SelectLabel>Gemini Models (Google)</SelectLabel>
-                            {MODELS.filter(model => model.provider === "google").map(model => (
+                            <SelectLabel>Gemini 1.5 Models (Google)</SelectLabel>
+                            {MODELS.filter(model => model.provider === "google" && model.id.includes("gemini-1.5")).map(model => (
+                              <SelectItem key={model.id} value={model.id}>
+                                <div>
+                                  <div className="font-medium">{model.name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {model.description}
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                          
+                          {/* Gemini 2.0 Models */}
+                          <SelectGroup>
+                            <SelectLabel>Gemini 2.0 Models (Google)</SelectLabel>
+                            {MODELS.filter(model => model.provider === "google" && model.id.includes("gemini-2.0")).map(model => (
                               <SelectItem key={model.id} value={model.id}>
                                 <div>
                                   <div className="font-medium">{model.name}</div>

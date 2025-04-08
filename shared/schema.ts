@@ -38,7 +38,11 @@ export const chatbots = pgTable("chatbots", {
   settings: jsonb("settings").$type<{
     initialMessage: string;
     systemPrompt: string;
-    model: "claude-3-opus-20240229" | "claude-3-sonnet-20240229" | "claude-3-haiku-20240307" | "gemini-pro" | "gemini-pro-vision";
+    model: "claude-3-opus-20240229" | "claude-3-sonnet-20240229" | "claude-3-haiku-20240307" | 
+           "gemini-1.5-pro" | "gemini-1.5-pro-001" | "gemini-1.5-pro-002" | 
+           "gemini-1.5-flash" | "gemini-1.5-flash-001" | "gemini-1.5-flash-002" | 
+           "gemini-2.0-flash" | "gemini-2.0-flash-001" | 
+           "gemini-2.0-flash-lite" | "gemini-2.0-flash-lite-001";
     temperature: number;
     maxTokens: number;
     theme: {
@@ -137,19 +141,76 @@ export const MODELS = [
     maxTokens: 2048,
     provider: "anthropic"
   },
-  // Gemini Models
+  // Gemini 1.5 Models
   {
-    id: "gemini-pro",
-    name: "Gemini Pro",
-    description: "Advanced language model for text generation and analysis",
-    maxTokens: 2048,
+    id: "gemini-1.5-pro",
+    name: "Gemini 1.5 Pro",
+    description: "Advanced multimodal model supporting up to 2M tokens",
+    maxTokens: 8192,
     provider: "google"
   },
   {
-    id: "gemini-pro-vision",
-    name: "Gemini Pro Vision",
-    description: "Multimodal model for text and image understanding",
-    maxTokens: 2048,
+    id: "gemini-1.5-pro-001",
+    name: "Gemini 1.5 Pro 001",
+    description: "Stable version of Gemini 1.5 Pro (May 2024)",
+    maxTokens: 8192,
+    provider: "google"
+  },
+  {
+    id: "gemini-1.5-pro-002",
+    name: "Gemini 1.5 Pro 002",
+    description: "Latest stable version of Gemini 1.5 Pro (Sep 2024)",
+    maxTokens: 8192,
+    provider: "google"
+  },
+  {
+    id: "gemini-1.5-flash",
+    name: "Gemini 1.5 Flash",
+    description: "Fast multimodal model for diverse tasks",
+    maxTokens: 8192,
+    provider: "google"
+  },
+  {
+    id: "gemini-1.5-flash-001",
+    name: "Gemini 1.5 Flash 001",
+    description: "Stable version of Gemini 1.5 Flash (May 2024)",
+    maxTokens: 8192,
+    provider: "google"
+  },
+  {
+    id: "gemini-1.5-flash-002",
+    name: "Gemini 1.5 Flash 002",
+    description: "Latest stable version of Gemini 1.5 Flash (Sep 2024)",
+    maxTokens: 8192,
+    provider: "google"
+  },
+  // Gemini 2.0 Models
+  {
+    id: "gemini-2.0-flash",
+    name: "Gemini 2.0 Flash",
+    description: "Advanced Gemini 2.0 Flash model",
+    maxTokens: 8192,
+    provider: "google"
+  },
+  {
+    id: "gemini-2.0-flash-001",
+    name: "Gemini 2.0 Flash 001",
+    description: "Stable version of Gemini 2.0 Flash (Jan 2025)",
+    maxTokens: 8192,
+    provider: "google"
+  },
+  {
+    id: "gemini-2.0-flash-lite",
+    name: "Gemini 2.0 Flash-Lite",
+    description: "Lighter, faster version of Gemini 2.0",
+    maxTokens: 8192,
+    provider: "google"
+  },
+  {
+    id: "gemini-2.0-flash-lite-001",
+    name: "Gemini 2.0 Flash-Lite 001",
+    description: "Stable version of Gemini 2.0 Flash-Lite",
+    maxTokens: 8192,
     provider: "google"
   }
 ] as const;
