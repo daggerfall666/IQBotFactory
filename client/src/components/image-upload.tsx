@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageEditModal } from "./image-edit-modal";
 import { Trash2 } from "lucide-react";
+import { imageCache } from "@/lib/imageCache";
 
 interface ImageUploadProps {
   onImageSelected: (file: File | null) => void;
@@ -53,9 +54,22 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
       setIsLoading(true);
       setSelectedFile(file);
 
+      // Check cache first
+      const cacheKey = imageCache.generateKey(file);
+      const cachedPreview = imageCache.get(cacheKey);
+
+      if (cachedPreview) {
+        setPreview(cachedPreview);
+        setIsEditModalOpen(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // If not in cache, read file and cache it
       const reader = new FileReader();
       reader.onloadend = () => {
         if (reader.result && typeof reader.result === 'string') {
+          imageCache.set(cacheKey, reader.result);
           setPreview(reader.result);
           setIsEditModalOpen(true);
         }
@@ -127,7 +141,7 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
           onChange={handleInputChange}
         />
 
-        <motion.div 
+        <motion.div
           className="relative group cursor-pointer"
           whileHover={{ scale: 1.02 }}
           transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -156,7 +170,7 @@ export function ImageUpload({ onImageSelected, defaultPreview, className }: Imag
                   alt="Avatar preview"
                   className="w-full h-full object-cover"
                 />
-                <motion.div 
+                <motion.div
                   className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                   initial={false}
                   animate={isDragging ? { opacity: 0.7 } : { opacity: 0 }}
