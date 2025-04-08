@@ -12,6 +12,7 @@ import { performance } from 'perf_hooks';
 import os from 'os';
 import { logger } from './utils/logger';
 import { WebSocketServer, WebSocket } from 'ws';
+import { geminiService } from "./services/gemini";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -169,7 +170,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Chat endpoint with stricter rate limiting
   app.post("/api/chat/:botId", chatLimiter, async (req, res) => {
     const startTime = performance.now();
 
@@ -227,7 +227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bot = await storage.getChatbot(botId);
       if (!bot) {
         logger.warn("Chatbot not found", { botId });
-        return res.status(404).json({ 
+        return res.status(400).json({ 
           error: "Chatbot not found",
           details: "No chatbot exists with the provided ID"
         });
@@ -240,44 +240,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         botId,
         messageLength: message.length,
         hasContext: !!context,
-        model: bot.settings.model
+        model: "gemini-pro"
       });
 
       try {
-        const anthropic = await getAnthropicClient(bot.apiKey);
+        const messages = [
+          {
+            role: "user",
+            content: context ? 
+              `Sistema: ${bot.settings.systemPrompt}\n\nContexto: ${context}\n\nUsuário: ${message}` :
+              `Sistema: ${bot.settings.systemPrompt}\n\nUsuário: ${message}`
+          }
+        ];
 
-        const response = await anthropic.messages.create({
-          model: bot.settings.model,
-          max_tokens: bot.settings.maxTokens,
+        const response = await geminiService.chat(messages, {
           temperature: bot.settings.temperature,
-          messages: [
-            { 
-              role: "user", 
-              content: context ? 
-                `Sistema: ${bot.settings.systemPrompt}\n\nContexto: ${context}\n\nUsuário: ${message}` :
-                `Sistema: ${bot.settings.systemPrompt}\n\nUsuário: ${message}`
-            }
-          ],
+          maxOutputTokens: bot.settings.maxTokens
         });
 
         const endTime = performance.now();
         const responseTime = endTime - startTime;
 
-        if (!response.content || !response.content[0]) {
+        if (!response || !response.content) {
           throw new Error("Empty response from AI service");
         }
-
-        const content = response.content[0];
-        if (content.type !== 'text') {
-          throw new Error(`Unexpected response type: ${content.type}`);
-        }
-
-        const botResponse = content.text;
 
         logger.info("Chat interaction completed", {
           botId,
           responseTime,
-          tokensUsed: response.usage?.output_tokens,
           success: true
         });
 
@@ -285,44 +275,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db.insert(chatInteractions).values({
           botId,
           userMessage: message,
-          botResponse,
-          model: bot.settings.model,
-          tokensUsed: response.usage?.output_tokens || 0,
+          botResponse: response.content,
+          model: "gemini-pro",
           responseTime: Math.round(responseTime),
           success: true,
           timestamp: new Date()
         });
 
-        return res.json({ response: botResponse });
+        return res.json({ response: response.content });
+
       } catch (err) {
         logger.error("Chat AI service error", err as Error, {
           botId,
-          model: bot.settings.model
+          model: "gemini-pro"
         });
 
         await db.insert(chatInteractions).values({
           botId,
           userMessage: message,
           botResponse: "",
-          model: bot.settings.model,
-          tokensUsed: 0,
+          model: "gemini-pro",
           responseTime: Math.round(performance.now() - startTime),
           success: false,
           errorMessage: err instanceof Error ? err.message : "Unknown error",
           timestamp: new Date()
         });
 
-        if (err instanceof Anthropic.APIError) {
-          return res.status(err.status || 500).json({
-            error: "AI Service Error",
-            details: "Invalid or missing API key. Please check the configuration."
-          });
-        } else {
-          return res.status(500).json({ 
-            error: "Error processing message",
-            details: err instanceof Error ? err.message : "Unknown error"
-          });
-        }
+        return res.status(500).json({ 
+          error: "Error processing message",
+          details: err instanceof Error ? err.message : "Unknown error"
+        });
       }
     } catch (err) {
       logger.error("Unhandled chat error", err as Error);
