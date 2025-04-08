@@ -38,7 +38,7 @@ export const chatbots = pgTable("chatbots", {
   settings: jsonb("settings").$type<{
     initialMessage: string;
     systemPrompt: string;
-    model: "claude-3-opus-20240229" | "claude-3-sonnet-20240229" | "claude-3-haiku-20240307";
+    model: "claude-3-opus-20240229" | "claude-3-sonnet-20240229" | "claude-3-haiku-20240307" | "gemini-pro" | "gemini-pro-vision";
     temperature: number;
     maxTokens: number;
     theme: {
@@ -114,24 +114,43 @@ export type InsertKnowledgeBase = z.infer<typeof insertKnowledgeBaseSchema>;
 export type ChatInteraction = typeof chatInteractions.$inferSelect;
 export type InsertChatInteraction = z.infer<typeof insertChatInteractionSchema>;
 
-export const CLAUDE_MODELS = [
+export const MODELS = [
+  // Claude Models
   {
     id: "claude-3-opus-20240229",
     name: "Claude 3 Opus",
     description: "Most capable model, ideal for complex tasks",
-    maxTokens: 4096
+    maxTokens: 4096,
+    provider: "anthropic"
   },
   {
     id: "claude-3-sonnet-20240229",
     name: "Claude 3 Sonnet",
     description: "Great balance of intelligence and speed",
-    maxTokens: 3072
+    maxTokens: 3072,
+    provider: "anthropic"
   },
   {
     id: "claude-3-haiku-20240307",
     name: "Claude 3 Haiku",
     description: "Fastest model, perfect for simple tasks",
-    maxTokens: 2048
+    maxTokens: 2048,
+    provider: "anthropic"
+  },
+  // Gemini Models
+  {
+    id: "gemini-pro",
+    name: "Gemini Pro",
+    description: "Advanced language model for text generation and analysis",
+    maxTokens: 2048,
+    provider: "google"
+  },
+  {
+    id: "gemini-pro-vision",
+    name: "Gemini Pro Vision",
+    description: "Multimodal model for text and image understanding",
+    maxTokens: 2048,
+    provider: "google"
   }
 ] as const;
 

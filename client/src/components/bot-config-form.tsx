@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertChatbotSchema, CLAUDE_MODELS } from "@shared/schema";
+import { insertChatbotSchema } from "@shared/schema";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +21,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from "@/components/ui/select";
 import {
   Card,
@@ -52,7 +54,7 @@ interface BotConfigFormProps {
   isLoading?: boolean;
 }
 
-// Demo bot configuration
+// Demo bot configuration.  This needs to be updated to reflect the new MODELS data structure.
 const demoBotConfig: Partial<Chatbot> = {
   name: "Claude Assistant",
   description: "Um assistente AI amigável e versátil para ajudar em várias tarefas",
@@ -94,6 +96,14 @@ Diretrizes:
     customPosition: {}
   }
 };
+
+// Sample model data.  Replace with your actual model data.
+const MODELS = [
+  { id: "claude-3-sonnet-20240229", name: "Claude-3 Sonnet", description: "A powerful large language model", provider: "anthropic" },
+  { id: "gemini-pro", name: "Gemini Pro", description: "Google's advanced language model", provider: "google" },
+  // Add more models here...
+];
+
 
 export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -313,7 +323,7 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                   name="settings.model"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Modelo Claude AI</FormLabel>
+                      <FormLabel>AI Model</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -321,16 +331,32 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {CLAUDE_MODELS.map(model => (
-                            <SelectItem key={model.id} value={model.id}>
-                              <div>
-                                <div className="font-medium">{model.name}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {model.description}
+                          <SelectGroup>
+                            <SelectLabel>Claude Models (Anthropic)</SelectLabel>
+                            {MODELS.filter(model => model.provider === "anthropic").map(model => (
+                              <SelectItem key={model.id} value={model.id}>
+                                <div>
+                                  <div className="font-medium">{model.name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {model.description}
+                                  </div>
                                 </div>
-                              </div>
-                            </SelectItem>
-                          ))}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                          <SelectGroup>
+                            <SelectLabel>Gemini Models (Google)</SelectLabel>
+                            {MODELS.filter(model => model.provider === "google").map(model => (
+                              <SelectItem key={model.id} value={model.id}>
+                                <div>
+                                  <div className="font-medium">{model.name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {model.description}
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
                         </SelectContent>
                       </Select>
                       <FormMessage />
