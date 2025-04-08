@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { Chatbot, InsertChatbot, KnowledgeBase, InsertKnowledgeBase, chatbots, knowledgeBase, systemSettings } from "@shared/schema";
+import { Chatbot, InsertChatbot, KnowledgeBase, InsertKnowledgeBase, chatbots, knowledgeBase, systemSettings, MODELS } from "@shared/schema";
 import { eq } from 'drizzle-orm';
 
 const connectionString = process.env.DATABASE_URL!;
@@ -27,7 +27,8 @@ export interface IStorage {
 export class PostgresStorage implements IStorage {
   async createChatbot(bot: InsertChatbot): Promise<Chatbot> {
     // Validate model type before insertion
-    if (!["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"].includes(bot.settings.model)) {
+    const validModels = MODELS.map(m => m.id);
+    if (!validModels.includes(bot.settings.model)) {
       throw new Error("Invalid model type");
     }
 
@@ -36,7 +37,7 @@ export class PostgresStorage implements IStorage {
       description: bot.description || "",
       settings: {
         ...bot.settings,
-        model: bot.settings.model as "claude-3-opus-20240229" | "claude-3-sonnet-20240229" | "claude-3-haiku-20240307"
+        model: bot.settings.model
       },
       wordpressConfig: bot.wordpressConfig,
       apiKey: bot.apiKey
@@ -60,8 +61,11 @@ export class PostgresStorage implements IStorage {
 
   async updateChatbot(id: number, bot: Partial<InsertChatbot>): Promise<Chatbot | undefined> {
     // Validate model type if it's being updated
-    if (bot.settings?.model && !["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"].includes(bot.settings.model)) {
-      throw new Error("Invalid model type");
+    if (bot.settings?.model) {
+      const validModels = MODELS.map(m => m.id);
+      if (!validModels.includes(bot.settings.model)) {
+        throw new Error("Invalid model type");
+      }
     }
 
     const [updated] = await db
@@ -70,7 +74,7 @@ export class PostgresStorage implements IStorage {
         ...bot,
         settings: bot.settings ? {
           ...bot.settings,
-          model: bot.settings.model as "claude-3-opus-20240229" | "claude-3-sonnet-20240229" | "claude-3-haiku-20240307"
+          model: bot.settings.model
         } : undefined
       })
       .where(eq(chatbots.id, id))
