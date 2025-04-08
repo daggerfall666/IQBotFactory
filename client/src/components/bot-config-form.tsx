@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertChatbotSchema } from "@shared/schema";
+import { insertChatbotSchema, MODELS } from "@shared/schema";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -96,13 +96,6 @@ Diretrizes:
     customPosition: {}
   }
 };
-
-// Sample model data.  Replace with your actual model data.
-const MODELS = [
-  { id: "claude-3-sonnet-20240229", name: "Claude-3 Sonnet", description: "A powerful large language model", provider: "anthropic" },
-  { id: "gemini-pro", name: "Gemini Pro", description: "Google's advanced language model", provider: "google" },
-  // Add more models here...
-];
 
 
 export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) {
