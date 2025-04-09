@@ -8,25 +8,35 @@ interface ClaudeMascotProps {
 }
 
 export function ClaudeMascot({ size = 120, animate = true, className = "" }: ClaudeMascotProps) {
-  // Animation variants
-  const eyeAnimation = animate ? {
-    animate: {
-      y: [0, -1, 0, 1, 0],
-      transition: {
-        duration: 2,
-        repeat: Infinity,
-        repeatType: "reverse" as "reverse"
-      }
-    }
-  } : {};
-
+  // Define animations only if animate prop is true
   const floatAnimation = animate ? {
     animate: {
       y: [0, -5, 0],
       transition: {
         duration: 3,
         repeat: Infinity,
-        repeatType: "reverse" as "reverse"
+        repeatType: "reverse" as const
+      }
+    }
+  } : {};
+
+  const eyeAnimation = animate ? {
+    animate: {
+      y: [0, -1, 0, 1, 0],
+      transition: {
+        duration: 2,
+        repeat: Infinity,
+        repeatType: "reverse" as const
+      }
+    }
+  } : {};
+
+  const bowTieAnimation = animate ? {
+    animate: {
+      rotate: [-2, 2, -2],
+      transition: { 
+        duration: 1.5, 
+        repeat: Infinity 
       }
     }
   } : {};
@@ -45,7 +55,7 @@ export function ClaudeMascot({ size = 120, animate = true, className = "" }: Cla
       <circle cx="100" cy="100" r="95" fill="#7C3AED" />
       
       {/* Face */}
-      <motion.g {...floatAnimation}>
+      <motion.g>
         {/* Claude eyes */}
         <motion.g {...eyeAnimation}>
           <circle cx="70" cy="80" r="10" fill="white" />
@@ -65,12 +75,7 @@ export function ClaudeMascot({ size = 120, animate = true, className = "" }: Cla
       </motion.g>
       
       {/* Claude's bow tie */}
-      <motion.g 
-        animate={animate ? {
-          rotate: [-2, 2, -2],
-          transition: { duration: 1.5, repeat: Infinity }
-        } : {}}
-      >
+      <motion.g {...bowTieAnimation}>
         <rect x="90" y="150" width="20" height="8" rx="4" fill="#FFFFFF" />
         <path d="M90 154 L75 146 L75 162 Z" fill="#FFFFFF" />
         <path d="M110 154 L125 146 L125 162 Z" fill="#FFFFFF" />

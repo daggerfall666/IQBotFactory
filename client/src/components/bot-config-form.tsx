@@ -110,42 +110,41 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
   const [isImproving, setIsImproving] = useState(false);
   const [showMissionInput, setShowMissionInput] = useState(false);
   const [mission, setMission] = useState("");
-  const [modelList, setModelList] = useState<any[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const { toast } = useToast();
   
   // Fetch models when provider changes
   useEffect(() => {
     const fetchModels = async () => {
-      const provider = bot.settings.provider;
+      const provider = bot.settings?.provider;
       if (!provider) return;
       
       setIsLoadingModels(true);
       try {
         if (provider === 'google') {
           // Get bot-specific API key if it exists
-          const apiKey = bot.settings.apiKeys?.google || '';
+          const apiKey = bot.settings?.apiKeys?.google || '';
           const options: RequestInit = {};
           
           if (apiKey) {
             options.headers = { 'x-api-key': apiKey };
           }
           
-          const response = await apiRequest('GET', '/api/models/gemini', undefined, options);
-          const data = await response.json();
-          setModelList(data);
+          // Obtém os modelos, mas não precisamos armazenar eles
+          // pois usamos a lista estática no formulário
+          await apiRequest('GET', '/api/models/gemini', options);
         } else if (provider === 'openrouter') {
           // Get bot-specific API key if it exists
-          const apiKey = bot.settings.apiKeys?.openrouter || '';
+          const apiKey = bot.settings?.apiKeys?.openrouter || '';
           const options: RequestInit = {};
           
           if (apiKey) {
             options.headers = { 'x-api-key': apiKey };
           }
           
-          const response = await apiRequest('GET', '/api/models/openrouter', undefined, options);
-          const data = await response.json();
-          setModelList(data);
+          // Obtém os modelos, mas não precisamos armazenar eles
+          // pois usamos a lista estática no formulário
+          await apiRequest('GET', '/api/models/openrouter', options);
         }
       } catch (error) {
         console.error('Failed to fetch models:', error);
@@ -160,7 +159,7 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
     };
 
     fetchModels();
-  }, [bot.settings.provider, bot.settings.apiKeys]);
+  }, [bot.settings?.provider, bot.settings?.apiKeys, toast]);
 
   const form = useForm({
     resolver: zodResolver(insertChatbotSchema),
@@ -393,8 +392,11 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                           field.onChange(value);
                           // Resetar o modelo quando mudar o provedor
                           const providerModels = MODELS.filter(model => model.provider === value);
-                          if (providerModels.length > 0) {
-                            form.setValue("settings.model", providerModels[0].id);
+                          if (providerModels && providerModels.length > 0) {
+                            // Garantimos que temos um valor de string para o modelo
+                            const modelId = providerModels[0]?.id || 
+                              (typeof providerModels[0] === 'string' ? providerModels[0] : 'openai/gpt-3.5-turbo');
+                            form.setValue("settings.model", modelId);
                           }
                           
                           // Garante que apiKeys existe
