@@ -54,33 +54,57 @@ export class OpenRouterService {
     }
   }
 
-  async listModels(): Promise<any> {
-    // A API OpenRouter não possui método direto para listar modelos na biblioteca
-    // Poderíamos implementar uma chamada direta à API se necessário
+  async listModels(apiKey?: string): Promise<any> {
     try {
-      // Retornamos apenas os modelos que já definimos no schema
-      return {
-        data: {
-          models: [
-            { id: "openai/gpt-3.5-turbo" },
-            { id: "openai/gpt-4" },
-            { id: "openai/gpt-4o" },
-            { id: "openai/gpt-4-turbo" },
-            { id: "anthropic/claude-3-opus" },
-            { id: "anthropic/claude-3-sonnet" },
-            { id: "anthropic/claude-3-haiku" },
-            { id: "meta-llama/llama-3-70b-instruct" },
-            { id: "meta-llama/llama-3-8b-instruct" },
-            { id: "mistralai/mistral-large" },
-            { id: "mistralai/mistral-small" },
-            { id: "mistralai/mistral-7b-instruct" },
-            { id: "mistralai/mixtral-8x7b-instruct" }
-          ]
+      const key = apiKey || process.env["OPENROUTER_API_KEY"];
+      
+      if (!key) {
+        throw new Error("No OpenRouter API key provided");
+      }
+      
+      // Fazer uma chamada direta à API OpenRouter para listar modelos
+      const response = await fetch("https://openrouter.ai/api/v1/models", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${key}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": process.env["REPLIT_DOMAIN"] || "https://replit.app",
+          "X-Title": "Chatbot Platform"
         }
-      };
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Error fetching models: ${response.status} ${errorText}`);
+        throw new Error(`Failed to fetch models: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Retrieved OpenRouter models:", data.data.length);
+      return data;
     } catch (error) {
       console.error("Error listing OpenRouter models:", error);
-      throw error;
+      // Em caso de erro, retornamos uma lista mínima de modelos conhecidos
+      return {
+        data: [
+          { id: "openai/gpt-3.5-turbo", context_length: 16385 },
+          { id: "openai/gpt-4", context_length: 8192 },
+          { id: "openai/gpt-4o", context_length: 8192 },
+          { id: "openai/gpt-4-turbo", context_length: 16384 },
+          { id: "anthropic/claude-3-opus", context_length: 200000 },
+          { id: "anthropic/claude-3-sonnet", context_length: 180000 },
+          { id: "anthropic/claude-3-haiku", context_length: 80000 },
+          { id: "anthropic/claude-3.5-sonnet", context_length: 200000 },
+          { id: "google/gemini-2.5-flash", context_length: 1000000 },
+          { id: "google/gemini-2.5-pro", context_length: 1000000 },
+          { id: "meta-llama/llama-3-70b-instruct", context_length: 8192 },
+          { id: "meta-llama/llama-3-8b-instruct", context_length: 8192 },
+          { id: "mistralai/mistral-large", context_length: 32768 },
+          { id: "mistralai/mistral-small", context_length: 32768 },
+          { id: "mistralai/mistral-7b-instruct", context_length: 8192 },
+          { id: "mistralai/mixtral-8x7b-instruct", context_length: 32768 }
+        ]
+      };
     }
   }
 }

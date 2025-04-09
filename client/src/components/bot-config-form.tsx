@@ -42,7 +42,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Chatbot } from "@shared/schema";
 import { Settings2, MessageSquare, Brush, Code, Wand2, Sparkles, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ImageUpload } from "./image-upload";
@@ -108,7 +108,50 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
   const [isImproving, setIsImproving] = useState(false);
   const [showMissionInput, setShowMissionInput] = useState(false);
   const [mission, setMission] = useState("");
+  const [geminiModels, setGeminiModels] = useState<any[]>([]);
+  const [openRouterModels, setOpenRouterModels] = useState<any[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
   const { toast } = useToast();
+  
+  // Fetch models when provider changes
+  useEffect(() => {
+    const fetchModels = async () => {
+      const provider = bot.settings.provider;
+      if (!provider) return;
+      
+      setIsLoadingModels(true);
+      try {
+        if (provider === 'google') {
+          // Get bot-specific API key if it exists
+          const apiKey = bot.settings.apiKeys?.google || '';
+          const headers = apiKey ? { 'x-api-key': apiKey } : undefined;
+          
+          const response = await apiRequest('GET', '/api/models/gemini', undefined, headers);
+          const data = await response.json();
+          setGeminiModels(data);
+        } else if (provider === 'openrouter') {
+          // Get bot-specific API key if it exists
+          const apiKey = bot.settings.apiKeys?.openrouter || '';
+          const headers = apiKey ? { 'x-api-key': apiKey } : undefined;
+          
+          const response = await apiRequest('GET', '/api/models/openrouter', undefined, headers);
+          const data = await response.json();
+          setOpenRouterModels(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch models:', error);
+        toast({
+          title: 'Erro ao carregar modelos',
+          description: 'Não foi possível carregar a lista de modelos disponíveis',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsLoadingModels(false);
+      }
+    };
+
+    fetchModels();
+  }, [bot.settings.provider, bot.settings.apiKeys]);
 
   const form = useForm({
     resolver: zodResolver(insertChatbotSchema),

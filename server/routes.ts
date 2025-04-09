@@ -261,6 +261,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ];
 
         let response;
+        let apiKey = null;
+        
+        // Verificar se existem chaves API específicas para o bot
+        if (bot.settings.apiKeys) {
+          if (provider === 'openrouter' && bot.settings.apiKeys.openrouter) {
+            apiKey = bot.settings.apiKeys.openrouter;
+          } else if (provider === 'google' && bot.settings.apiKeys.google) {
+            apiKey = bot.settings.apiKeys.google;
+          } else if (provider === 'anthropic' && bot.settings.apiKeys.anthropic) {
+            apiKey = bot.settings.apiKeys.anthropic;
+          }
+        }
         
         // Seleciona o serviço apropriado com base no modelo escolhido
         if (provider === 'openrouter') {
@@ -268,20 +280,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           response = await openRouterService.chat(messages, {
             model: modelId,
             temperature: bot.settings.temperature,
-            maxOutputTokens: bot.settings.maxTokens
+            maxOutputTokens: bot.settings.maxTokens,
+            apiKey: apiKey
           });
         } else if (provider === 'google') {
           // Se for um modelo do Gemini
           response = await geminiService.chat(messages, {
             model: modelId,
             temperature: bot.settings.temperature,
-            maxOutputTokens: bot.settings.maxTokens
+            maxOutputTokens: bot.settings.maxTokens,
+            apiKey: apiKey
           });
         } else {
           // Fallback para Gemini se o provedor não for reconhecido
           response = await geminiService.chat(messages, {
             temperature: bot.settings.temperature,
-            maxOutputTokens: bot.settings.maxTokens
+            maxOutputTokens: bot.settings.maxTokens,
+            apiKey: apiKey
           });
         }
 
@@ -662,6 +677,39 @@ Return only the improved prompt without any explanations or metadata.`
       logger.error("Prompt testing error:", err);
       res.status(500).json({ 
         error: "Failed to test prompt",
+        details: err instanceof Error ? err.message : "Unknown error"
+      });
+    }
+  });
+
+  // API para obter a lista atualizada de modelos disponíveis
+  app.get("/api/models/openrouter", apiLimiter, async (req, res) => {
+    try {
+      // Opcionalmente recebe a chave de API do usuário
+      const apiKey = req.headers['x-api-key'] as string | undefined;
+      
+      const models = await openRouterService.listModels(apiKey);
+      res.json(models);
+    } catch (err) {
+      logger.error("Error fetching OpenRouter models:", err);
+      res.status(500).json({ 
+        error: "Failed to fetch models",
+        details: err instanceof Error ? err.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/models/gemini", apiLimiter, async (req, res) => {
+    try {
+      // Opcionalmente recebe a chave de API do usuário
+      const apiKey = req.headers['x-api-key'] as string | undefined;
+      
+      const models = await geminiService.listModels(apiKey);
+      res.json(models);
+    } catch (err) {
+      logger.error("Error fetching Gemini models:", err);
+      res.status(500).json({ 
+        error: "Failed to fetch models",
         details: err instanceof Error ? err.message : "Unknown error"
       });
     }

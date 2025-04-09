@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { Message, ChatConfig } from "@shared/types/chat";
 
 export class GeminiService {
-  private defaultModel: string = "gemini-2.0-flash"; // Set the latest model as default
+  private defaultModel: string = "gemini-2.5-flash"; // Set the latest model as default
 
   private getClient(apiKey?: string): GoogleGenerativeAI {
     // Use the provided API key or fall back to environment variable
@@ -68,6 +68,40 @@ export class GeminiService {
     } catch (error) {
       console.error("Error in Gemini chat:", error);
       throw error;
+    }
+  }
+
+  async listModels(apiKey?: string): Promise<any> {
+    try {
+      // Podemos retornar uma lista de modelos diretamente, já que o Google não fornece uma API para listar modelos
+      // Esta é uma lista atualizada com os modelos mais recentes da Gemini
+      return {
+        data: [
+          { id: "gemini-2.5-flash", context_length: 1000000 },
+          { id: "gemini-2.5-pro", context_length: 1000000 },
+          { id: "gemini-2.0-flash", context_length: 16384 },
+          { id: "gemini-2.0-flash-001", context_length: 16384 },
+          { id: "gemini-2.0-flash-lite", context_length: 16384 },
+          { id: "gemini-2.0-flash-lite-001", context_length: 16384 },
+          { id: "gemini-1.5-pro", context_length: 2000000 },
+          { id: "gemini-1.5-pro-001", context_length: 2000000 },
+          { id: "gemini-1.5-pro-002", context_length: 2000000 },
+          { id: "gemini-1.5-flash", context_length: 1000000 },
+          { id: "gemini-1.5-flash-001", context_length: 1000000 },
+          { id: "gemini-1.5-flash-002", context_length: 1000000 }
+        ]
+      };
+    } catch (error) {
+      console.error("Error listing Gemini models:", error);
+      return {
+        data: [
+          { id: "gemini-2.5-flash", context_length: 1000000 },
+          { id: "gemini-2.5-pro", context_length: 1000000 },
+          { id: "gemini-2.0-flash", context_length: 16384 },
+          { id: "gemini-1.5-pro", context_length: 2000000 },
+          { id: "gemini-1.5-flash", context_length: 1000000 }
+        ]
+      };
     }
   }
 
