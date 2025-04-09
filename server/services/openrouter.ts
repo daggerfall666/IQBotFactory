@@ -46,12 +46,20 @@ export class OpenRouterService {
       // Tratamento especial para modelos específicos se necessário
       let response;
       try {
-        // A biblioteca espera um "prompt" ou "customMessages"
-        response = await client.chat({
+        // Verifica se estamos usando customMessages corretamente
+        console.log(`OpenRouter request payload:`, {
           model: modelName,
           customMessages: formattedMessages,
           temperature: config?.temperature ?? 0.7,
           maxTokens: config?.maxOutputTokens ?? 1024,
+        });
+        
+        // Usa o formato correto de mensagens para a OpenRouter API
+        response = await client.chat({
+          model: modelName,
+          customMessages: formattedMessages, // A biblioteca espera customMessages, não messages
+          temperature: config?.temperature ?? 0.7,
+          maxTokens: config?.maxOutputTokens ?? 1024
         });
       } catch (chatError: any) {
         console.error(`OpenRouter chat error for model ${modelName}:`, chatError);
