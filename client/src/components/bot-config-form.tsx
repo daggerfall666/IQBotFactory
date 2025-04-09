@@ -534,9 +534,16 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                          {/* Mostrar apenas modelos do provedor selecionado */}
-                          {form.watch("settings.provider") === "anthropic" && (
-                            <SelectGroup>
+                            {isLoadingModels ? (
+                              <div className="p-4 text-center">
+                                <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+                                <p className="mt-2">Carregando modelos...</p>
+                              </div>
+                            ) : (
+                              <>
+                                {/* Anthropic/Claude models */}
+                                {form.watch("settings.provider") === "anthropic" && (
+                                  <SelectGroup>
                               <SelectLabel>Claude Models (Anthropic)</SelectLabel>
                               {MODELS.filter(model => model.provider === "anthropic").map(model => (
                                 <SelectItem key={model.id} value={model.id}>
@@ -644,6 +651,8 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                               </SelectGroup>
                             </>
                           )}
+                              </>
+                            )}
                         </SelectContent>
                       </Select>
                       </ModelAnimationWrapper>

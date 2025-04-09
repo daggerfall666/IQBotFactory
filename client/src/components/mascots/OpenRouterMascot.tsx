@@ -8,218 +8,148 @@ interface OpenRouterMascotProps {
 }
 
 export function OpenRouterMascot({ size = 120, animate = true, className = "" }: OpenRouterMascotProps) {
-  const spinAnimation = {
-    initial: { rotate: 0 },
-    animate: animate ? {
-      rotate: 360,
+  // Animation variants
+  const eyeAnimation = animate ? {
+    animate: {
+      y: [0, -1, 0, 1, 0],
       transition: {
+        duration: 2,
         repeat: Infinity,
-        repeatType: "loop" as const,
-        duration: 10,
-        ease: "linear"
+        repeatType: "reverse" as "reverse"
       }
-    } : {}
-  };
+    }
+  } : {};
 
-  const pulseAnimation = {
-    initial: { scale: 1 },
-    animate: animate ? {
-      scale: [1, 1.05, 1],
+  const floatAnimation = animate ? {
+    animate: {
+      y: [0, -5, 0],
       transition: {
-        repeat: Infinity,
-        repeatType: "loop" as const,
         duration: 3,
-        ease: "easeInOut"
-      }
-    } : {}
-  };
-
-  const blinkAnimation = {
-    initial: { opacity: 1 },
-    animate: animate ? {
-      opacity: [1, 0.5, 1],
-      transition: {
         repeat: Infinity,
-        repeatType: "loop" as const,
-        duration: 0.75,
-        ease: "easeInOut",
-        repeatDelay: 3.5
+        repeatType: "reverse" as "reverse"
       }
-    } : {}
-  };
+    }
+  } : {};
 
-  const moveAroundAnimation = {
-    initial: { x: 0, y: 0 },
-    animate: animate ? {
-      x: [0, 5, 0, -5, 0],
-      y: [0, -5, 0, 5, 0],
+  const rotateAnimation = animate ? {
+    animate: {
+      rotate: [0, 5, 0, -5, 0],
       transition: {
+        duration: 5,
         repeat: Infinity,
-        repeatType: "loop" as const,
-        duration: 4,
-        ease: "easeInOut"
+        repeatType: "loop" as "loop"
       }
-    } : {}
-  };
+    }
+  } : {};
 
   return (
-    <motion.div 
-      className={`inline-block ${className}`} 
-      style={{ width: size, height: size }}
-      {...moveAroundAnimation}
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 200 200"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      {...floatAnimation}
     >
-      <svg
-        width="100%"
-        height="100%"
-        viewBox="0 0 200 200"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Base circle */}
-        <motion.circle
-          cx="100"
-          cy="100"
-          r="75"
-          fill="#333333"
-          {...pulseAnimation}
+      {/* Background circle */}
+      <circle cx="100" cy="100" r="95" fill="#333333" />
+      
+      {/* Router Body */}
+      <motion.g {...rotateAnimation}>
+        <rect x="55" y="70" width="90" height="60" rx="5" fill="#555555" />
+        
+        {/* Router lights */}
+        <motion.circle 
+          cx="75" 
+          cy="85" 
+          r="5" 
+          fill="#4CAF50"
+          animate={animate ? {
+            opacity: [1, 0.3, 1],
+            transition: { duration: 1, repeat: Infinity }
+          } : {}}
+        />
+        <motion.circle 
+          cx="95" 
+          cy="85" 
+          r="5" 
+          fill="#FFC107"
+          animate={animate ? {
+            opacity: [1, 0.5, 1],
+            transition: { duration: 1.5, repeat: Infinity, delay: 0.2 }
+          } : {}}
+        />
+        <motion.circle 
+          cx="115" 
+          cy="85" 
+          r="5" 
+          fill="#03A9F4"
+          animate={animate ? {
+            opacity: [1, 0.5, 1],
+            transition: { duration: 1.2, repeat: Infinity, delay: 0.4 }
+          } : {}}
         />
         
-        {/* Router symbol outer ring */}
-        <motion.g {...spinAnimation}>
-          <circle
-            cx="100"
-            cy="100"
-            r="70"
-            stroke="#FF6B6B"
-            strokeWidth="6"
-            strokeDasharray="15 10"
-            fill="transparent"
-          />
+        {/* Router antennas */}
+        <line x1="70" y1="70" x2="70" y2="50" stroke="#888888" strokeWidth="3" />
+        <line x1="100" y1="70" x2="100" y2="45" stroke="#888888" strokeWidth="3" />
+        <line x1="130" y1="70" x2="130" y2="55" stroke="#888888" strokeWidth="3" />
+        
+        {/* Antenna tops */}
+        <circle cx="70" cy="50" r="3" fill="#BBBBBB" />
+        <circle cx="100" cy="45" r="3" fill="#BBBBBB" />
+        <circle cx="130" cy="55" r="3" fill="#BBBBBB" />
+      </motion.g>
+      
+      {/* Face */}
+      <motion.g>
+        {/* Eyes */}
+        <motion.g {...eyeAnimation}>
+          <circle cx="80" cy="115" r="6" fill="white" />
+          <circle cx="120" cy="115" r="6" fill="white" />
         </motion.g>
         
-        {/* Inner circle */}
-        <circle
-          cx="100"
-          cy="100"
-          r="45"
-          fill="#444444"
-        />
-        
-        {/* Connection nodes */}
-        <motion.circle
-          cx="65"
-          cy="65"
-          r="10"
-          fill="#4ECDC4"
-          {...blinkAnimation}
-        />
-        
-        <motion.circle
-          cx="135"
-          cy="65"
-          r="10"
-          fill="#FF6B6B"
-          animate={{
-            opacity: [1, 0.5, 1],
-            transition: {
-              repeat: Infinity,
-              repeatType: "loop",
-              duration: 0.75,
-              ease: "easeInOut",
-              repeatDelay: 2.8
-            }
-          }}
-        />
-        
-        <motion.circle
-          cx="65"
-          cy="135"
-          r="10"
-          fill="#F7FFF7"
-          animate={{
-            opacity: [1, 0.5, 1],
-            transition: {
-              repeat: Infinity,
-              repeatType: "loop",
-              duration: 0.75,
-              ease: "easeInOut",
-              repeatDelay: 4.2
-            }
-          }}
-        />
-        
-        <motion.circle
-          cx="135"
-          cy="135"
-          r="10"
-          fill="#FFE66D"
-          animate={{
-            opacity: [1, 0.5, 1],
-            transition: {
-              repeat: Infinity,
-              repeatType: "loop",
-              duration: 0.75,
-              ease: "easeInOut",
-              repeatDelay: 3.7
-            }
-          }}
-        />
-        
-        {/* Connection lines */}
-        <line
-          x1="65"
-          y1="65"
-          x2="100"
-          y2="100"
-          stroke="#4ECDC4"
+        {/* Smile */}
+        <path
+          d="M85 130 Q100 140 115 130"
+          stroke="white"
           strokeWidth="3"
+          strokeLinecap="round"
+          fill="none"
         />
-        
-        <line
-          x1="135"
-          y1="65"
-          x2="100"
-          y2="100"
-          stroke="#FF6B6B"
-          strokeWidth="3"
+      </motion.g>
+      
+      {/* Network waves */}
+      <motion.g
+        animate={animate ? {
+          opacity: [0, 1, 0],
+          scale: [0.8, 1.1, 0.8],
+          transition: { duration: 2, repeat: Infinity }
+        } : {}}
+      >
+        <path
+          d="M50 100 C60 70, 140 70, 150 100"
+          stroke="#BBBBBB"
+          strokeWidth="2"
+          strokeDasharray="4 2"
+          fill="none"
         />
-        
-        <line
-          x1="65"
-          y1="135"
-          x2="100"
-          y2="100"
-          stroke="#F7FFF7"
-          strokeWidth="3"
+        <path
+          d="M40 100 C60 60, 140 60, 160 100"
+          stroke="#999999"
+          strokeWidth="2"
+          strokeDasharray="4 2"
+          fill="none"
         />
-        
-        <line
-          x1="135"
-          y1="135"
-          x2="100"
-          y2="100"
-          stroke="#FFE66D"
-          strokeWidth="3"
+        <path
+          d="M30 100 C60 50, 140 50, 170 100"
+          stroke="#666666"
+          strokeWidth="2"
+          strokeDasharray="4 2"
+          fill="none"
         />
-        
-        {/* Center node */}
-        <motion.circle
-          cx="100"
-          cy="100"
-          r="15"
-          fill="#FF6B6B"
-          {...pulseAnimation}
-        />
-        
-        {/* Eye */}
-        <motion.circle
-          cx="100"
-          cy="100"
-          r="7"
-          fill="white"
-          {...blinkAnimation}
-        />
-      </svg>
-    </motion.div>
+      </motion.g>
+    </motion.svg>
   );
 }
