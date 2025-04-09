@@ -93,7 +93,7 @@ export const chatInteractions = pgTable("chat_interactions", {
   userMessage: text("user_message").notNull(),
   botResponse: text("bot_response").notNull(),
   model: text("model").notNull(),
-  tokensUsed: integer("tokens_used").notNull(),
+  tokensUsed: integer("tokens_used").notNull().default(0),
   responseTime: integer("response_time").notNull(),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   success: boolean("success").notNull().default(true),
@@ -141,6 +141,13 @@ export const MODELS = [
     name: "Claude 3 Haiku",
     description: "Fastest model, perfect for simple tasks",
     maxTokens: 2048,
+    provider: "anthropic"
+  },
+  {
+    id: "claude-3.5-sonnet-20240620",
+    name: "Claude 3.5 Sonnet",
+    description: "Latest Claude model with enhanced capabilities",
+    maxTokens: 4096,
     provider: "anthropic"
   },
   // Gemini 1.5 Models
@@ -215,6 +222,21 @@ export const MODELS = [
     maxTokens: 8192,
     provider: "google"
   },
+  // Gemini 2.5 Models
+  {
+    id: "gemini-2.5-flash",
+    name: "Gemini 2.5 Flash",
+    description: "Latest Gemini Flash model with enhanced capabilities",
+    maxTokens: 16384,
+    provider: "google"
+  },
+  {
+    id: "gemini-2.5-pro",
+    name: "Gemini 2.5 Pro",
+    description: "Most capable Gemini model with advanced reasoning",
+    maxTokens: 32768,
+    provider: "google"
+  },
   // OpenRouter Models (OpenAI)
   {
     id: "openai/gpt-3.5-turbo",
@@ -244,7 +266,50 @@ export const MODELS = [
     maxTokens: 4096,
     provider: "openrouter"
   },
+  {
+    id: "openai/gpt-4o-mini",
+    name: "GPT-4o Mini",
+    description: "Faster, more efficient variant of GPT-4o",
+    maxTokens: 4096,
+    provider: "openrouter"
+  },
+  // OpenRouter Models (Google via OpenRouter)
+  {
+    id: "google/gemini-2.5-flash",
+    name: "Gemini 2.5 Flash (via OpenRouter)",
+    description: "Google's Gemini 2.5 Flash model via OpenRouter",
+    maxTokens: 16384,
+    provider: "openrouter"
+  },
+  {
+    id: "google/gemini-2.5-pro",
+    name: "Gemini 2.5 Pro (via OpenRouter)",
+    description: "Google's most capable Gemini model via OpenRouter",
+    maxTokens: 32768,
+    provider: "openrouter"
+  },
+  {
+    id: "google/gemini-1.5-pro",
+    name: "Gemini 1.5 Pro (via OpenRouter)",
+    description: "Google's Gemini 1.5 Pro model via OpenRouter",
+    maxTokens: 8192,
+    provider: "openrouter"
+  },
+  {
+    id: "google/gemini-1.5-flash",
+    name: "Gemini 1.5 Flash (via OpenRouter)",
+    description: "Google's fast Gemini model via OpenRouter",
+    maxTokens: 8192,
+    provider: "openrouter"
+  },
   // OpenRouter Models (Anthropic Claude via OpenRouter)
+  {
+    id: "anthropic/claude-3.5-sonnet",
+    name: "Claude 3.5 Sonnet (via OpenRouter)",
+    description: "Latest Claude model via OpenRouter",
+    maxTokens: 4096,
+    provider: "openrouter"
+  },
   {
     id: "anthropic/claude-3-opus",
     name: "Claude 3 Opus (via OpenRouter)",
