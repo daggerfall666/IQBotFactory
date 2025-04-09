@@ -38,20 +38,15 @@ export const chatbots = pgTable("chatbots", {
   settings: jsonb("settings").$type<{
     initialMessage: string;
     systemPrompt: string;
-    model: "claude-3-opus-20240229" | "claude-3-sonnet-20240229" | "claude-3-haiku-20240307" | 
-           "gemini-1.5-pro" | "gemini-1.5-pro-001" | "gemini-1.5-pro-002" | 
-           "gemini-1.5-flash" | "gemini-1.5-flash-001" | "gemini-1.5-flash-002" | 
-           "gemini-2.0-flash" | "gemini-2.0-flash-001" | 
-           "gemini-2.0-flash-lite" | "gemini-2.0-flash-lite-001" |
-           // OpenRouter models
-           "openai/gpt-3.5-turbo" | "openai/gpt-4" | "openai/gpt-4o" | "openai/gpt-4-turbo" |
-           "anthropic/claude-3-opus" | "anthropic/claude-3-sonnet" | "anthropic/claude-3-haiku" |
-           "meta-llama/llama-3-70b-instruct" | "meta-llama/llama-3-8b-instruct" |
-           "mistralai/mistral-7b-instruct" | "mistralai/mixtral-8x7b-instruct" |
-           "mistralai/mistral-large" | "mistralai/mistral-small" |
-           string; // Para permitir outros modelos do OpenRouter
+    provider: "anthropic" | "google" | "openrouter";
+    model: string;
     temperature: number;
     maxTokens: number;
+    apiKeys?: {
+      anthropic?: string;
+      google?: string;
+      openrouter?: string;
+    };
     theme: {
       primaryColor: string;
       fontFamily: string;

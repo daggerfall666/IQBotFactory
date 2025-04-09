@@ -12,6 +12,8 @@ export const chatConfigSchema = z.object({
   temperature: z.number().min(0).max(1).default(0.7),
   maxOutputTokens: z.number().positive().default(2048),
   model: z.string().optional(), // Model identifier like gemini-2.0-flash
+  provider: z.enum(["anthropic", "google", "openrouter"]).optional(),
+  apiKey: z.string().optional(), // API key for the provider
 });
 
 export type ChatConfig = z.infer<typeof chatConfigSchema>;

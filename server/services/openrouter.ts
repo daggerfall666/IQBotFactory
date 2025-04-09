@@ -2,27 +2,32 @@ import { OpenRouterClient } from "openrouter-kit";
 import type { Message, ChatConfig } from "@shared/types/chat";
 
 export class OpenRouterService {
-  private client: OpenRouterClient;
-  private defaultModel: string;
+  private defaultModel: string = "openai/gpt-3.5-turbo"; // Modelo padrão
 
-  constructor() {
-    const apiKey = process.env['OPENROUTER_API_KEY'];
-    if (!apiKey) {
-      throw new Error("OPENROUTER_API_KEY is not set");
+  private getClient(apiKey?: string): OpenRouterClient {
+    // Use a chave API fornecida ou use a variável de ambiente como fallback
+    const key = apiKey || process.env["OPENROUTER_API_KEY"];
+    
+    if (!key) {
+      throw new Error("No OpenRouter API key provided");
     }
-    this.client = new OpenRouterClient({
-      apiKey,
-      apiEndpoint: "https://openrouter.ai/api/v1", // Usando apiEndpoint em vez de baseUrl
+    
+    return new OpenRouterClient({
+      apiKey: key,
+      apiEndpoint: "https://openrouter.ai/api/v1",
     });
-    this.defaultModel = "openai/gpt-3.5-turbo"; // Modelo padrão
   }
 
   async chat(messages: Message[], config?: Partial<ChatConfig>): Promise<Message> {
     try {
       // Use o modelo especificado ou o padrão
       const modelName = config?.model || this.defaultModel;
+      const apiKey = config?.apiKey;
       
       console.log(`Using OpenRouter model: ${modelName}`);
+      
+      // Inicializa o cliente com a chave API do usuário, se fornecida
+      const client = this.getClient(apiKey);
       
       // Converte mensagens para o formato esperado pelo OpenRouter
       const formattedMessages = messages.map(msg => ({
@@ -31,7 +36,7 @@ export class OpenRouterService {
       }));
 
       // A biblioteca espera um "prompt" ou "customMessages"
-      const response = await this.client.chat({
+      const response = await client.chat({
         model: modelName,
         customMessages: formattedMessages,
         temperature: config?.temperature ?? 0.7,

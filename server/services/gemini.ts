@@ -2,25 +2,30 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { Message, ChatConfig } from "@shared/types/chat";
 
 export class GeminiService {
-  private genAI: GoogleGenerativeAI;
-  private defaultModel: string;
+  private defaultModel: string = "gemini-2.0-flash"; // Set the latest model as default
 
-  constructor() {
-    const apiKey = process.env['GOOGLE_AI_API_KEY'];
-    if (!apiKey) {
-      throw new Error("GOOGLE_AI_API_KEY is not set");
+  private getClient(apiKey?: string): GoogleGenerativeAI {
+    // Use the provided API key or fall back to environment variable
+    const key = apiKey || process.env["GOOGLE_AI_API_KEY"];
+    
+    if (!key) {
+      throw new Error("No Google AI API key provided");
     }
-    this.genAI = new GoogleGenerativeAI(apiKey);
-    this.defaultModel = "gemini-2.0-flash"; // Set the latest model as default
+    
+    return new GoogleGenerativeAI(key);
   }
 
   async chat(messages: Message[], config?: Partial<ChatConfig>): Promise<Message> {
     try {
       // Use specified model or default
       const modelName = config?.model || this.defaultModel;
+      const apiKey = config?.apiKey;
       
       console.log(`Using Gemini model: ${modelName}`);
-      const model = this.genAI.getGenerativeModel({ model: modelName });
+      
+      // Initialize client with user's API key if provided
+      const genAI = this.getClient(apiKey);
+      const model = genAI.getGenerativeModel({ model: modelName });
       
       const chat = model.startChat({
         generationConfig: {

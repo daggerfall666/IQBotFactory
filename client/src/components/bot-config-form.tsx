@@ -45,7 +45,6 @@ import { Settings2, MessageSquare, Brush, Code, Wand2, Sparkles, Trash2 } from "
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ImageUpload } from "./image-upload";
 
 interface BotConfigFormProps {
@@ -54,15 +53,21 @@ interface BotConfigFormProps {
   isLoading?: boolean;
 }
 
-// Demo bot configuration.  This needs to be updated to reflect the new MODELS data structure.
+// Demo bot configuration
 const demoBotConfig: Partial<Chatbot> = {
   name: "Claude Assistant",
   description: "Um assistente AI amigável e versátil para ajudar em várias tarefas",
   settings: {
     initialMessage: "Olá! Sou o Claude, seu assistente pessoal. Como posso ajudar você hoje?",
+    provider: "anthropic",
     model: "claude-3-sonnet-20240229",
     temperature: 0.7,
     maxTokens: 2000,
+    apiKeys: {
+      anthropic: "",
+      google: "",
+      openrouter: "",
+    },
     systemPrompt: `Você é o Claude, um assistente AI amigável e prestativo com personalidade otimista e empática. Seu objetivo é ajudar os usuários de forma clara e eficiente, mantendo um tom conversacional agradável.
 
 Diretrizes:
@@ -317,10 +322,113 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
               <CardContent className="space-y-6">
                 <FormField
                   control={form.control}
+                  name="settings.provider"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Provedor AI</FormLabel>
+                      <Select onValueChange={(value) => {
+                        field.onChange(value);
+                        // Resetar o modelo quando mudar o provedor
+                        const providerModels = MODELS.filter(model => model.provider === value);
+                        if (providerModels.length > 0) {
+                          form.setValue("settings.model", providerModels[0].id);
+                        }
+                        
+                        // Garante que apiKeys existe
+                        const currentApiKeys = form.getValues("settings.apiKeys") || {};
+                        form.setValue("settings.apiKeys", currentApiKeys);
+                      }} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um provedor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+                          <SelectItem value="google">Google (Gemini)</SelectItem>
+                          <SelectItem value="openrouter">OpenRouter (Multi-Modelo)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Escolha o provedor da API de inteligência artificial
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="settings.apiKeys.anthropic"
+                  render={({ field }) => (
+                    <FormItem className={form.watch("settings.provider") === "anthropic" ? "" : "hidden"}>
+                      <FormLabel>Chave API da Anthropic</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          {...field}
+                          placeholder="sk-ant-..."
+                          className="font-mono"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Forneça sua própria chave API da Anthropic para o Claude
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="settings.apiKeys.google"
+                  render={({ field }) => (
+                    <FormItem className={form.watch("settings.provider") === "google" ? "" : "hidden"}>
+                      <FormLabel>Chave API do Google AI</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          {...field}
+                          placeholder="AIzaSy..."
+                          className="font-mono"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Forneça sua própria chave API do Google AI para o Gemini
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="settings.apiKeys.openrouter"
+                  render={({ field }) => (
+                    <FormItem className={form.watch("settings.provider") === "openrouter" ? "" : "hidden"}>
+                      <FormLabel>Chave API do OpenRouter</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          {...field}
+                          placeholder="sk-or-..."
+                          className="font-mono"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Forneça sua própria chave API do OpenRouter
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="settings.model"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>AI Model</FormLabel>
+                      <FormLabel>Modelo AI</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -328,108 +436,116 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectGroup>
-                            <SelectLabel>Claude Models (Anthropic)</SelectLabel>
-                            {MODELS.filter(model => model.provider === "anthropic").map(model => (
-                              <SelectItem key={model.id} value={model.id}>
-                                <div>
-                                  <div className="font-medium">{model.name}</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {model.description}
+                          {/* Mostrar apenas modelos do provedor selecionado */}
+                          {form.watch("settings.provider") === "anthropic" && (
+                            <SelectGroup>
+                              <SelectLabel>Claude Models (Anthropic)</SelectLabel>
+                              {MODELS.filter(model => model.provider === "anthropic").map(model => (
+                                <SelectItem key={model.id} value={model.id}>
+                                  <div>
+                                    <div className="font-medium">{model.name}</div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {model.description}
+                                    </div>
                                   </div>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                          {/* Gemini 1.5 Models */}
-                          <SelectGroup>
-                            <SelectLabel>Gemini 1.5 Models (Google)</SelectLabel>
-                            {MODELS.filter(model => model.provider === "google" && model.id.includes("gemini-1.5")).map(model => (
-                              <SelectItem key={model.id} value={model.id}>
-                                <div>
-                                  <div className="font-medium">{model.name}</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {model.description}
-                                  </div>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          )}
                           
-                          {/* Gemini 2.0 Models */}
-                          <SelectGroup>
-                            <SelectLabel>Gemini 2.0 Models (Google)</SelectLabel>
-                            {MODELS.filter(model => model.provider === "google" && model.id.includes("gemini-2.0")).map(model => (
-                              <SelectItem key={model.id} value={model.id}>
-                                <div>
-                                  <div className="font-medium">{model.name}</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {model.description}
-                                  </div>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
+                          {/* Gemini Models (Google) */}
+                          {form.watch("settings.provider") === "google" && (
+                            <>
+                              <SelectGroup>
+                                <SelectLabel>Gemini 1.5 Models</SelectLabel>
+                                {MODELS.filter(model => model.provider === "google" && model.id.includes("gemini-1.5")).map(model => (
+                                  <SelectItem key={model.id} value={model.id}>
+                                    <div>
+                                      <div className="font-medium">{model.name}</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {model.description}
+                                      </div>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                              
+                              <SelectGroup>
+                                <SelectLabel>Gemini 2.0 Models</SelectLabel>
+                                {MODELS.filter(model => model.provider === "google" && model.id.includes("gemini-2.0")).map(model => (
+                                  <SelectItem key={model.id} value={model.id}>
+                                    <div>
+                                      <div className="font-medium">{model.name}</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {model.description}
+                                      </div>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </>
+                          )}
                           
-                          {/* OpenRouter OpenAI Models */}
-                          <SelectGroup>
-                            <SelectLabel>OpenAI Models (via OpenRouter)</SelectLabel>
-                            {MODELS.filter(model => model.provider === "openrouter" && model.id.includes("openai")).map(model => (
-                              <SelectItem key={model.id} value={model.id}>
-                                <div>
-                                  <div className="font-medium">{model.name}</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {model.description}
-                                  </div>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                          
-                          {/* OpenRouter Anthropic Models */}
-                          <SelectGroup>
-                            <SelectLabel>Claude Models (via OpenRouter)</SelectLabel>
-                            {MODELS.filter(model => model.provider === "openrouter" && model.id.includes("anthropic")).map(model => (
-                              <SelectItem key={model.id} value={model.id}>
-                                <div>
-                                  <div className="font-medium">{model.name}</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {model.description}
-                                  </div>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                          
-                          {/* OpenRouter Llama Models */}
-                          <SelectGroup>
-                            <SelectLabel>Llama Models (via OpenRouter)</SelectLabel>
-                            {MODELS.filter(model => model.provider === "openrouter" && model.id.includes("llama")).map(model => (
-                              <SelectItem key={model.id} value={model.id}>
-                                <div>
-                                  <div className="font-medium">{model.name}</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {model.description}
-                                  </div>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                          
-                          {/* OpenRouter Mistral Models */}
-                          <SelectGroup>
-                            <SelectLabel>Mistral Models (via OpenRouter)</SelectLabel>
-                            {MODELS.filter(model => model.provider === "openrouter" && model.id.includes("mistral")).map(model => (
-                              <SelectItem key={model.id} value={model.id}>
-                                <div>
-                                  <div className="font-medium">{model.name}</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {model.description}
-                                  </div>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
+                          {/* OpenRouter Models */}
+                          {form.watch("settings.provider") === "openrouter" && (
+                            <>
+                              <SelectGroup>
+                                <SelectLabel>OpenAI Models</SelectLabel>
+                                {MODELS.filter(model => model.provider === "openrouter" && model.id.includes("openai")).map(model => (
+                                  <SelectItem key={model.id} value={model.id}>
+                                    <div>
+                                      <div className="font-medium">{model.name}</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {model.description}
+                                      </div>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                              
+                              <SelectGroup>
+                                <SelectLabel>Claude Models</SelectLabel>
+                                {MODELS.filter(model => model.provider === "openrouter" && model.id.includes("anthropic")).map(model => (
+                                  <SelectItem key={model.id} value={model.id}>
+                                    <div>
+                                      <div className="font-medium">{model.name}</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {model.description}
+                                      </div>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                              
+                              <SelectGroup>
+                                <SelectLabel>Llama Models</SelectLabel>
+                                {MODELS.filter(model => model.provider === "openrouter" && model.id.includes("llama")).map(model => (
+                                  <SelectItem key={model.id} value={model.id}>
+                                    <div>
+                                      <div className="font-medium">{model.name}</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {model.description}
+                                      </div>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                              
+                              <SelectGroup>
+                                <SelectLabel>Mistral Models</SelectLabel>
+                                {MODELS.filter(model => model.provider === "openrouter" && model.id.includes("mistral")).map(model => (
+                                  <SelectItem key={model.id} value={model.id}>
+                                    <div>
+                                      <div className="font-medium">{model.name}</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {model.description}
+                                      </div>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </>
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -618,23 +734,6 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
 
                 <FormField
                   control={form.control}
-                  name="settings.theme.avatarBackgroundColor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cor de Fundo do Avatar</FormLabel>
-                      <FormControl>
-                        <div className="flex gap-2">
-                          <Input {...field} type="color" className="w-24" />
-                          <Input {...field} placeholder="#000000" />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
                   name="settings.theme.botName"
                   render={({ field }) => (
                     <FormItem>
@@ -645,6 +744,28 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                       <FormDescription>
                         Nome que será exibido nas mensagens do bot
                       </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="settings.theme.darkMode"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between">
+                      <div>
+                        <FormLabel>Modo Escuro</FormLabel>
+                        <FormDescription>
+                          Ativar tema escuro para o chat
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -712,98 +833,6 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="settings.theme.customMessageStyles"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cores Personalizadas das Mensagens</FormLabel>
-                      <FormControl>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Fundo (Usuário)</label>
-                            <Input
-                              type="color"
-                              value={field.value?.userBackground || "#000000"}
-                              onChange={(e) =>
-                                field.onChange({
-                                  ...field.value,
-                                  userBackground: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Fundo (Bot)</label>
-                            <Input
-                              type="color"
-                              value={field.value?.botBackground || "#000000"}
-                              onChange={(e) =>
-                                field.onChange({
-                                  ...field.value,
-                                  botBackground: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Texto (Usuário)</label>
-                            <Input
-                              type="color"
-                              value={field.value?.userText || "#000000"}
-                              onChange={(e) =>
-                                field.onChange({
-                                  ...field.value,
-                                  userText: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Texto (Bot)</label>
-                            <Input
-                              type="color"
-                              value={field.value?.botText || "#000000"}
-                              onChange={(e) =>
-                                field.onChange({
-                                  ...field.value,
-                                  botText: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                        </div>
-                      </FormControl>
-                      <FormDescription>
-                        Personalize as cores de fundo e texto das mensagens
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="settings.theme.darkMode"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between">
-                      <div>
-                        <FormLabel>Modo Escuro</FormLabel>
-                        <FormDescription>
-                          Ativar tema escuro para o chatbot
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -811,9 +840,9 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
           <TabsContent value="embed" className="space-y-6 mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Configurações do Embed</CardTitle>
+                <CardTitle>Configurações de Embed</CardTitle>
                 <CardDescription>
-                  Configure como o chatbot será exibido no seu site WordPress
+                  Configure como o chat será incorporado em seu site
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -822,7 +851,7 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                   name="wordpressConfig.position"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Posição do Widget</FormLabel>
+                      <FormLabel>Posição</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -832,6 +861,8 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                         <SelectContent>
                           <SelectItem value="bottom-right">Inferior Direito</SelectItem>
                           <SelectItem value="bottom-left">Inferior Esquerdo</SelectItem>
+                          <SelectItem value="top-right">Superior Direito</SelectItem>
+                          <SelectItem value="top-left">Superior Esquerdo</SelectItem>
                           <SelectItem value="custom">Personalizado</SelectItem>
                         </SelectContent>
                       </Select>
@@ -848,7 +879,7 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                       <div>
                         <FormLabel>Ocultar em Dispositivos Móveis</FormLabel>
                         <FormDescription>
-                          O chatbot não será exibido em telas pequenas
+                          Não mostrar o chatbot em telas pequenas
                         </FormDescription>
                       </div>
                       <FormControl>
@@ -871,12 +902,12 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                       <FormControl>
                         <Textarea
                           {...field}
-                          className="font-mono text-sm"
-                          placeholder=".chat-widget { /* seus estilos */ }"
+                          placeholder=".my-chat { ... }"
+                          className="min-h-[100px] font-mono"
                         />
                       </FormControl>
                       <FormDescription>
-                        CSS adicional para personalizar o widget
+                        CSS adicional para personalizar o widget de chat
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -889,7 +920,7 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
 
         <div className="flex justify-end">
           <Button type="submit" disabled={isLoading}>
-            Salvar Alterações
+            {isLoading ? "Salvando..." : "Salvar Configurações"}
           </Button>
         </div>
       </form>
