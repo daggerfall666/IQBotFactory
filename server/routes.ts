@@ -13,6 +13,7 @@ import os from 'os';
 import { logger } from './utils/logger';
 import { WebSocketServer, WebSocket } from 'ws';
 import { geminiService } from "./services/gemini";
+import { openRouterService } from "./services/openrouter";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -236,11 +237,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const kb = await storage.listKnowledgeBase(botId);
       const context = kb.map(entry => entry.content).join("\n\n");
 
+      const modelId = bot.settings.model;
+      const provider = modelId.includes('/') ? 'openrouter' :
+                       modelId.includes('gemini') ? 'google' : 
+                       modelId.includes('claude') ? 'anthropic' : 'unknown';
+      
       logger.info("Processing chat request", {
         botId,
         messageLength: message.length,
         hasContext: !!context,
-        model: "gemini-pro"
+        model: modelId,
+        provider
       });
 
       try {
@@ -253,10 +260,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         ];
 
-        const response = await geminiService.chat(messages, {
-          temperature: bot.settings.temperature,
-          maxOutputTokens: bot.settings.maxTokens
-        });
+        let response;
+        
+        // Seleciona o serviço apropriado com base no modelo escolhido
+        if (provider === 'openrouter') {
+          // Se for um modelo do OpenRouter
+          response = await openRouterService.chat(messages, {
+            model: modelId,
+            temperature: bot.settings.temperature,
+            maxOutputTokens: bot.settings.maxTokens
+          });
+        } else if (provider === 'google') {
+          // Se for um modelo do Gemini
+          response = await geminiService.chat(messages, {
+            model: modelId,
+            temperature: bot.settings.temperature,
+            maxOutputTokens: bot.settings.maxTokens
+          });
+        } else {
+          // Fallback para Gemini se o provedor não for reconhecido
+          response = await geminiService.chat(messages, {
+            temperature: bot.settings.temperature,
+            maxOutputTokens: bot.settings.maxTokens
+          });
+        }
 
         const endTime = performance.now();
         const responseTime = endTime - startTime;
@@ -276,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           botId,
           userMessage: message,
           botResponse: response.content,
-          model: "gemini-pro",
+          model: modelId,
           responseTime: Math.round(responseTime),
           success: true,
           timestamp: new Date()
@@ -287,14 +314,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (err) {
         logger.error("Chat AI service error", err as Error, {
           botId,
-          model: "gemini-pro"
+          model: modelId
         });
 
         await db.insert(chatInteractions).values({
           botId,
           userMessage: message,
           botResponse: "",
-          model: "gemini-pro",
+          model: modelId,
           responseTime: Math.round(performance.now() - startTime),
           success: false,
           errorMessage: err instanceof Error ? err.message : "Unknown error",

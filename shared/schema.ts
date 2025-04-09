@@ -42,7 +42,14 @@ export const chatbots = pgTable("chatbots", {
            "gemini-1.5-pro" | "gemini-1.5-pro-001" | "gemini-1.5-pro-002" | 
            "gemini-1.5-flash" | "gemini-1.5-flash-001" | "gemini-1.5-flash-002" | 
            "gemini-2.0-flash" | "gemini-2.0-flash-001" | 
-           "gemini-2.0-flash-lite" | "gemini-2.0-flash-lite-001";
+           "gemini-2.0-flash-lite" | "gemini-2.0-flash-lite-001" |
+           // OpenRouter models
+           "openai/gpt-3.5-turbo" | "openai/gpt-4" | "openai/gpt-4o" | "openai/gpt-4-turbo" |
+           "anthropic/claude-3-opus" | "anthropic/claude-3-sonnet" | "anthropic/claude-3-haiku" |
+           "meta-llama/llama-3-70b-instruct" | "meta-llama/llama-3-8b-instruct" |
+           "mistralai/mistral-7b-instruct" | "mistralai/mixtral-8x7b-instruct" |
+           "mistralai/mistral-large" | "mistralai/mistral-small" |
+           string; // Para permitir outros modelos do OpenRouter
     temperature: number;
     maxTokens: number;
     theme: {
@@ -212,6 +219,101 @@ export const MODELS = [
     description: "Stable version of Gemini 2.0 Flash-Lite",
     maxTokens: 8192,
     provider: "google"
+  },
+  // OpenRouter Models (OpenAI)
+  {
+    id: "openai/gpt-3.5-turbo",
+    name: "GPT-3.5 Turbo",
+    description: "Balanced model with good performance and low cost",
+    maxTokens: 4096,
+    provider: "openrouter"
+  },
+  {
+    id: "openai/gpt-4",
+    name: "GPT-4",
+    description: "Advanced reasoning capabilities",
+    maxTokens: 8192,
+    provider: "openrouter"
+  },
+  {
+    id: "openai/gpt-4o",
+    name: "GPT-4o",
+    description: "Latest GPT-4 model from OpenAI with improved performance",
+    maxTokens: 8192,
+    provider: "openrouter"
+  },
+  {
+    id: "openai/gpt-4-turbo",
+    name: "GPT-4 Turbo",
+    description: "Faster variant of GPT-4 with good balance of performance",
+    maxTokens: 4096,
+    provider: "openrouter"
+  },
+  // OpenRouter Models (Anthropic Claude via OpenRouter)
+  {
+    id: "anthropic/claude-3-opus",
+    name: "Claude 3 Opus (via OpenRouter)",
+    description: "Most capable Claude model via OpenRouter",
+    maxTokens: 4096,
+    provider: "openrouter"
+  },
+  {
+    id: "anthropic/claude-3-sonnet",
+    name: "Claude 3 Sonnet (via OpenRouter)",
+    description: "Balanced Claude model via OpenRouter",
+    maxTokens: 4096,
+    provider: "openrouter"
+  },
+  {
+    id: "anthropic/claude-3-haiku",
+    name: "Claude 3 Haiku (via OpenRouter)",
+    description: "Fast Claude model via OpenRouter",
+    maxTokens: 4096,
+    provider: "openrouter"
+  },
+  // OpenRouter Models (Meta Llama)
+  {
+    id: "meta-llama/llama-3-70b-instruct",
+    name: "Llama 3 70B",
+    description: "Powerful open model from Meta",
+    maxTokens: 4096,
+    provider: "openrouter"
+  },
+  {
+    id: "meta-llama/llama-3-8b-instruct",
+    name: "Llama 3 8B",
+    description: "Lightweight open model from Meta",
+    maxTokens: 4096,
+    provider: "openrouter"
+  },
+  // OpenRouter Models (Mistral AI)
+  {
+    id: "mistralai/mistral-large",
+    name: "Mistral Large",
+    description: "Advanced model from Mistral AI",
+    maxTokens: 4096,
+    provider: "openrouter"
+  },
+  {
+    id: "mistralai/mistral-small",
+    name: "Mistral Small",
+    description: "Compact model from Mistral AI",
+    maxTokens: 4096,
+    provider: "openrouter"
+  },
+  {
+    id: "mistralai/mistral-7b-instruct",
+    name: "Mistral 7B",
+    description: "Efficient open weights model from Mistral AI",
+    maxTokens: 4096,
+    provider: "openrouter"
+  },
+  {
+    id: "mistralai/mixtral-8x7b-instruct",
+    name: "Mixtral 8x7B",
+    description: "Mixture of experts model from Mistral AI",
+    maxTokens: 4096,
+    provider: "openrouter"
   }
 ] as const;
 

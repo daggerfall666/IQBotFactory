@@ -370,6 +370,66 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                               </SelectItem>
                             ))}
                           </SelectGroup>
+                          
+                          {/* OpenRouter OpenAI Models */}
+                          <SelectGroup>
+                            <SelectLabel>OpenAI Models (via OpenRouter)</SelectLabel>
+                            {MODELS.filter(model => model.provider === "openrouter" && model.id.includes("openai")).map(model => (
+                              <SelectItem key={model.id} value={model.id}>
+                                <div>
+                                  <div className="font-medium">{model.name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {model.description}
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                          
+                          {/* OpenRouter Anthropic Models */}
+                          <SelectGroup>
+                            <SelectLabel>Claude Models (via OpenRouter)</SelectLabel>
+                            {MODELS.filter(model => model.provider === "openrouter" && model.id.includes("anthropic")).map(model => (
+                              <SelectItem key={model.id} value={model.id}>
+                                <div>
+                                  <div className="font-medium">{model.name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {model.description}
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                          
+                          {/* OpenRouter Llama Models */}
+                          <SelectGroup>
+                            <SelectLabel>Llama Models (via OpenRouter)</SelectLabel>
+                            {MODELS.filter(model => model.provider === "openrouter" && model.id.includes("llama")).map(model => (
+                              <SelectItem key={model.id} value={model.id}>
+                                <div>
+                                  <div className="font-medium">{model.name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {model.description}
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                          
+                          {/* OpenRouter Mistral Models */}
+                          <SelectGroup>
+                            <SelectLabel>Mistral Models (via OpenRouter)</SelectLabel>
+                            {MODELS.filter(model => model.provider === "openrouter" && model.id.includes("mistral")).map(model => (
+                              <SelectItem key={model.id} value={model.id}>
+                                <div>
+                                  <div className="font-medium">{model.name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {model.description}
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
                         </SelectContent>
                       </Select>
                       <FormMessage />
