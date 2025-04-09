@@ -46,6 +46,8 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ImageUpload } from "./image-upload";
+import { ModelMascotSelector } from "./mascots";
+import { ModelAnimationWrapper } from "./model-animation-wrapper";
 
 interface BotConfigFormProps {
   bot: Chatbot;
@@ -108,8 +110,7 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
   const [isImproving, setIsImproving] = useState(false);
   const [showMissionInput, setShowMissionInput] = useState(false);
   const [mission, setMission] = useState("");
-  const [geminiModels, setGeminiModels] = useState<any[]>([]);
-  const [openRouterModels, setOpenRouterModels] = useState<any[]>([]);
+  const [modelList, setModelList] = useState<any[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const { toast } = useToast();
   
@@ -124,19 +125,27 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
         if (provider === 'google') {
           // Get bot-specific API key if it exists
           const apiKey = bot.settings.apiKeys?.google || '';
-          const headers = apiKey ? { 'x-api-key': apiKey } : undefined;
+          const options: RequestInit = {};
           
-          const response = await apiRequest('GET', '/api/models/gemini', undefined, headers);
+          if (apiKey) {
+            options.headers = { 'x-api-key': apiKey };
+          }
+          
+          const response = await apiRequest('GET', '/api/models/gemini', undefined, options);
           const data = await response.json();
-          setGeminiModels(data);
+          setModelList(data);
         } else if (provider === 'openrouter') {
           // Get bot-specific API key if it exists
           const apiKey = bot.settings.apiKeys?.openrouter || '';
-          const headers = apiKey ? { 'x-api-key': apiKey } : undefined;
+          const options: RequestInit = {};
           
-          const response = await apiRequest('GET', '/api/models/openrouter', undefined, headers);
+          if (apiKey) {
+            options.headers = { 'x-api-key': apiKey };
+          }
+          
+          const response = await apiRequest('GET', '/api/models/openrouter', undefined, options);
           const data = await response.json();
-          setOpenRouterModels(data);
+          setModelList(data);
         }
       } catch (error) {
         console.error('Failed to fetch models:', error);
@@ -363,42 +372,84 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="settings.provider"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Provedor AI</FormLabel>
-                      <Select onValueChange={(value) => {
-                        field.onChange(value);
-                        // Resetar o modelo quando mudar o provedor
-                        const providerModels = MODELS.filter(model => model.provider === value);
-                        if (providerModels.length > 0) {
-                          form.setValue("settings.model", providerModels[0].id);
-                        }
-                        
-                        // Garante que apiKeys existe
-                        const currentApiKeys = form.getValues("settings.apiKeys") || {};
-                        form.setValue("settings.apiKeys", currentApiKeys);
-                      }} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione um provedor" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
-                          <SelectItem value="google">Google (Gemini)</SelectItem>
-                          <SelectItem value="openrouter">OpenRouter (Multi-Modelo)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Escolha o provedor da API de inteligência artificial
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Provider selection with mascot animation */}
+                <div className="mb-8 flex flex-col items-center">
+                  <ModelMascotSelector 
+                    provider={form.watch("settings.provider") || ""}
+                    size={150}
+                    animate={true}
+                    className="mb-4"
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="settings.provider"
+                    render={({ field }) => (
+                      <FormItem className="w-full max-w-lg">
+                        <FormLabel className="text-center w-full block text-lg font-medium">
+                          Escolha seu Provedor AI
+                        </FormLabel>
+                        <Select onValueChange={(value) => {
+                          field.onChange(value);
+                          // Resetar o modelo quando mudar o provedor
+                          const providerModels = MODELS.filter(model => model.provider === value);
+                          if (providerModels.length > 0) {
+                            form.setValue("settings.model", providerModels[0].id);
+                          }
+                          
+                          // Garante que apiKeys existe
+                          const currentApiKeys = form.getValues("settings.apiKeys") || {};
+                          form.setValue("settings.apiKeys", currentApiKeys);
+                        }} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="text-center">
+                              <SelectValue placeholder="Selecione um provedor" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="anthropic" className="p-3 hover:bg-violet-50 dark:hover:bg-violet-900/20">
+                              <div className="flex gap-3 items-center">
+                                <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-full">
+                                  <div className="w-6 h-6 rounded-full bg-violet-500 flex items-center justify-center text-white font-bold">C</div>
+                                </div>
+                                <div>
+                                  <div className="font-medium">Anthropic (Claude)</div>
+                                  <div className="text-sm text-muted-foreground">Assistentes versáteis com personalidade</div>
+                                </div>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="google" className="p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                              <div className="flex gap-3 items-center">
+                                <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full">
+                                  <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">G</div>
+                                </div>
+                                <div>
+                                  <div className="font-medium">Google (Gemini)</div>
+                                  <div className="text-sm text-muted-foreground">Modelos multimodais potentes e avançados</div>
+                                </div>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="openrouter" className="p-3 hover:bg-gray-50 dark:hover:bg-gray-800">
+                              <div className="flex gap-3 items-center">
+                                <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-full">
+                                  <div className="w-6 h-6 rounded-full bg-gray-700 dark:bg-gray-500 flex items-center justify-center text-white font-bold">O</div>
+                                </div>
+                                <div>
+                                  <div className="font-medium">OpenRouter (Multi-Modelo)</div>
+                                  <div className="text-sm text-muted-foreground">Acesso a múltiplos modelos através de uma única API</div>
+                                </div>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription className="text-center">
+                          Escolha o provedor da API de inteligência artificial
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
@@ -466,19 +517,23 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                   )}
                 />
 
+                {/* Use the ModelAnimationWrapper to add celebration effects */}
                 <FormField
                   control={form.control}
                   name="settings.model"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Modelo AI</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione um modelo" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
+                      <FormLabel className="text-center block text-lg font-medium">Modelo AI</FormLabel>
+                      <ModelAnimationWrapper provider={form.watch("settings.provider") || ""}>
+                        <Select onValueChange={(value) => {
+                          field.onChange(value);
+                        }} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="relative z-10 bg-white dark:bg-gray-950">
+                              <SelectValue placeholder="Selecione um modelo" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
                           {/* Mostrar apenas modelos do provedor selecionado */}
                           {form.watch("settings.provider") === "anthropic" && (
                             <SelectGroup>
@@ -591,6 +646,7 @@ export function BotConfigForm({ bot, onSubmit, isLoading }: BotConfigFormProps) 
                           )}
                         </SelectContent>
                       </Select>
+                      </ModelAnimationWrapper>
                       <FormMessage />
                     </FormItem>
                   )}
